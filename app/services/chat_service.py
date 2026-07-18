@@ -1,31 +1,17 @@
-# def get_ai_response(message : str) -> str :
-#     return f"You said {message}"
+from app.llm.ollama_client import generate_response_stream
+from app.memory.chat_memory import get_history, add_message
+from typing import Generator
 
-# from app.llm.ollama_client import generate_response
-# def get_ai_response(message: str) -> str:
-#     answer = generate_response(message)
-#     return answer
-
-from app.llm.ollama_client import generate_response
-from app.memory.chat_memory import (get_history, add_message)
-
-def get_ai_response(message: str) -> str:
+def get_ai_response_stream(message: str) -> Generator[str, None, None]:
     user_id = "default_user"
 
-    add_message(
-        user_id=user_id,
-        role= "user",
-        content=message
-    )
+    add_message(user_id=user_id, role="user", content=message)
 
     history = get_history(user_id)
+    full_response = ""
 
-    ai_response = generate_response(history)
+    for chunk in generate_response_stream(history):   # normal for ✅
+        full_response += chunk
+        yield chunk
 
-    add_message(
-        user_id=user_id,
-        role="assistant",
-        content=ai_response
-    )
-
-    return ai_response
+    add_message(user_id=user_id, role="assistant", content=full_response)

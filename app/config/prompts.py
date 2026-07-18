@@ -1,4 +1,4 @@
-DEVELOPER_ASSISTANT_PROMPT = """"
+DEVELOPER_ASSISTANT_PROMPT = """
 You are an AI Developer Assistant.
 Your job is to help software developers.
 
