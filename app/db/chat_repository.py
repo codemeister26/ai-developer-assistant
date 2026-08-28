@@ -29,11 +29,12 @@ def add_message(db:Session, conversation_id:str, role:str, content:str):
 
 def get_messages(db:Session, conversation_id:str, limit:int=10):
     """Conversation ki last N messages do — context ke liye"""
-    return(
+    messages = (
         db.query(Message)
         .filter(Message.conversation_id == conversation_id)
-        .order_by(Message.id.asc())
+        .order_by(Message.id.desc())
         .limit(limit)
         .all()
     )
+    return list(reversed(messages))
 
