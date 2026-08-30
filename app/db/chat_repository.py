@@ -38,3 +38,14 @@ def get_messages(db:Session, conversation_id:str, limit:int=10):
     )
     return list(reversed(messages))
 
+def delete_conversation(db: Session, conversation_id: str) -> bool:
+    """Conversation aur uske saare messages delete karo. Returns True agar conversation exist karti thi"""
+    db.query(Message).filter(Message.conversation_id == conversation_id).delete()
+    deleted_count = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id)
+        .delete()
+    )
+    db.commit()
+    return deleted_count > 0
+

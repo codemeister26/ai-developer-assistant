@@ -28,6 +28,11 @@ def add_message(conversation_id:str, role:str, content:str):
     finally:
         db.close()
 
-def clear_history(conversation_id: str):
-     """Abhi ke liye placeholder — Phase 4 mein implement karenge"""
-     pass
+def clear_history(conversation_id: str) -> bool:
+    """Conversation ki poori history permanently delete karo. Returns True agar conversation mili"""
+    db = SessionLocal()
+
+    try:
+        return chat_repository.delete_conversation(db, conversation_id)
+    finally:
+        db.close()
