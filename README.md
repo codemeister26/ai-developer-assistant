@@ -159,3 +159,15 @@ python3 -m uvicorn app.main:app --reload
 ```
 http://127.0.0.1:8000/docs
 ```
+
+---
+
+## Development Scripts
+
+### Push changes to GitHub
+
+```bash
+./push.sh "your commit message"
+```
+
+Stages all changes, commits with the given message, and pushes to the current branch.
