@@ -23,3 +23,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://ai_user:ai_password@local
 # ─── Logging Settings ─────────────────────────────────────────────────────────
 # Kitni detail mein logs chahiye: DEBUG, INFO, WARNING, ERROR, CRITICAL
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+# ─── Chat Limits ──────────────────────────────────────────────────────────────
+# Ek message max kitna lamba ho sakta hai — isse bade message reject ho jaate hain
+MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", "4000"))
