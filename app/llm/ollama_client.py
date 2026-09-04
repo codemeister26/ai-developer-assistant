@@ -2,7 +2,10 @@ from ollama import Client
 from app.config.settings import OLLAMA_HOST, OLLAMA_MODEL
 from app.config.prompts import DEVELOPER_ASSISTANT_PROMPT
 from typing import Generator
+import logging
 import time
+
+logger = logging.getLogger(__name__)
 
 client = Client(OLLAMA_HOST)
 
@@ -24,12 +27,12 @@ def generate_response_stream(messages: list) -> Generator[str, None, None]:
             content = chunk["message"]["content"]
             if content:
                 if first_chunk:
-                    print(f"⏱ First token time: {time.time() - start:.2f}s")
+                    logger.info("First token time: %.2fs", time.time() - start)
                     first_chunk = False
                 yield content
 
-        print(f"⏱ Total time: {time.time() - start:.2f}s")
+        logger.info("Total time: %.2fs", time.time() - start)
 
-    except Exception as e:
-        print(f"Ollama Error: {e}")
+    except Exception:
+        logger.exception("Ollama request failed")
         yield "AI service is currently unavailable."

@@ -1,6 +1,9 @@
 from fastapi import APIRouter
 from sqlalchemy import text
 from app.db.database import SessionLocal
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -12,6 +15,7 @@ def health():
         db.execute(text("SELECT 1"))
         db.close()
     except Exception:
+        logger.exception("Health check: database unreachable")
         db_status = "unreachable"
 
     return {

@@ -19,3 +19,7 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")           # Use hone wal
 # ─── Database Settings ────────────────────────────────────────────────────────
 # Format: postgresql://username:password@host/database_name
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://ai_user:ai_password@localhost/ai_assistant")
+
+# ─── Logging Settings ─────────────────────────────────────────────────────────
+# Kitni detail mein logs chahiye: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
