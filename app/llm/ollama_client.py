@@ -9,6 +9,10 @@ logger = logging.getLogger(__name__)
 
 client = Client(OLLAMA_HOST)
 
+
+class LLMUnavailableError(Exception):
+    """Ollama se baat nahi ho payi — service layer decide karega user ko kya dikhana hai"""
+
 def generate_response_stream(messages: list) -> Generator[str, None, None]:
     try:
         start = time.time()
@@ -33,6 +37,8 @@ def generate_response_stream(messages: list) -> Generator[str, None, None]:
 
         logger.info("Total time: %.2fs", time.time() - start)
 
-    except Exception:
+    except Exception as e:
+        # Error text yahan yield nahi karte — warna wo assistant ke jawab ki tarah
+        # history mein save ho jaata hai
         logger.exception("Ollama request failed")
-        yield "AI service is currently unavailable."
+        raise LLMUnavailableError("Ollama request failed") from e
