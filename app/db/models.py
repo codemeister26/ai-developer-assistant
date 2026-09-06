@@ -10,7 +10,9 @@ class Conversation(Base):
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    conversation_id = Column(String, ForeignKey("conversations.id"))
+    # index isliye — har chat request history is column pe filter karti hai.
+    # Postgres foreign key pe apne aap index nahi banata.
+    conversation_id = Column(String, ForeignKey("conversations.id"), index=True)
     role = Column(String)
     content = Column(Text)
     created_at = Column(DateTime, default=func.now())

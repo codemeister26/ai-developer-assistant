@@ -141,6 +141,14 @@ GRANT ALL ON SCHEMA public TO ai_user;
 \q
 ```
 
+> **Already have a database from an earlier version?**
+> Tables auto-create hoti hain, par maujooda tables update nahi hotin. Agar tumhara
+> `messages` table pehle se bana hua hai, ye index manually add karo:
+>
+> ```sql
+> CREATE INDEX IF NOT EXISTS ix_messages_conversation_id ON messages (conversation_id);
+> ```
+
 ### 5. Start Ollama
 
 ```bash
