@@ -1,0 +1,6 @@
+# Sirf development/testing ke liye — production pe install karne ki zarurat nahi
+# Install: pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+pytest==9.1.1
