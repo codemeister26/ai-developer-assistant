@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 
+import Markdown from './Markdown'
+
 export default function MessageList({ messages, isStreaming }) {
   const bottomRef = useRef(null)
 
@@ -23,13 +25,22 @@ export default function MessageList({ messages, isStreaming }) {
     <div className="messages">
       {messages.map((message, index) => {
         const isLast = index === messages.length - 1
-        const showCursor = isStreaming && isLast && message.role === 'assistant'
+        const isAssistant = message.role === 'assistant'
+        const showCursor = isStreaming && isLast && isAssistant
 
         return (
           <div key={index} className={`message ${message.role}`}>
-            <div className="role">{message.role === 'user' ? 'You' : 'Assistant'}</div>
+            <div className="role">{isAssistant ? 'Assistant' : 'You'}</div>
+
             <div className="content">
-              {message.content}
+              {/* Assistant markdown bhejta hai — code blocks, lists, bold.
+                  User ne jo type kiya wo waisa ka waisa dikhao. */}
+              {isAssistant ? (
+                <Markdown>{message.content}</Markdown>
+              ) : (
+                <span className="plain-text">{message.content}</span>
+              )}
+
               {showCursor && <span className="cursor" />}
             </div>
           </div>
