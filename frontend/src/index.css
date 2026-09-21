@@ -7,6 +7,7 @@
   --accent: #4f7cff;
   --danger: #ff6b6b;
   --user-bubble: #1f2937;
+  --sidebar-width: 260px;
 
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color-scheme: dark;
@@ -14,6 +15,14 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Jinhone system mein animations kam karne ko kaha hai, unke liye turant toggle */
+@media (prefers-reduced-motion: reduce) {
+  .app,
+  .sidebar {
+    transition: none;
+  }
 }
 
 body {
@@ -24,13 +33,14 @@ body {
 
 .app {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: var(--sidebar-width) 1fr;
   height: 100vh;
+  transition: grid-template-columns 260ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Sidebar band hone par chat poori chaudai le leti hai */
+/* Sidebar band hone par column 0 ho jaata hai — width animate hoti hai */
 .app.sidebar-hidden {
-  grid-template-columns: 1fr;
+  --sidebar-width: 0px;
 }
 
 /* ─── Sidebar ─────────────────────────────────────────────────────────── */
@@ -38,6 +48,18 @@ body {
 .sidebar {
   background: var(--panel);
   border-right: 1px solid var(--border);
+  overflow: hidden;   /* band hote waqt content clip hota hai */
+  transition: border-right-color 260ms ease;
+}
+
+.app.sidebar-hidden .sidebar {
+  border-right-color: transparent;
+}
+
+/* Fixed width — isse content sikudta nahi, seedha slide hokar bahar jaata hai */
+.sidebar-inner {
+  width: 260px;
+  height: 100%;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -45,13 +67,7 @@ body {
   overflow: hidden;
 }
 
-.sidebar-top {
-  display: flex;
-  gap: 8px;
-}
-
 .new-chat {
-  flex: 1;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;

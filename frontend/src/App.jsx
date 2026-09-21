@@ -153,21 +153,20 @@ export default function App() {
         onSelect={selectConversation}
         onDelete={removeConversation}
         onNewChat={startNewChat}
-        onToggle={() => setSidebarOpen(false)}
       />
 
       <main className="chat">
         <header className="chat-header">
           <div className="header-left">
-            {!sidebarOpen && (
-              <button
-                className="sidebar-toggle"
-                onClick={() => setSidebarOpen(true)}
-                title="Show sidebar"
-              >
-                ☰
-              </button>
-            )}
+            {/* Button hamesha yahin rehta hai — animation ke beech pop nahi karta */}
+            <button
+              className="sidebar-toggle"
+              onClick={() => setSidebarOpen((open) => !open)}
+              title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              aria-expanded={sidebarOpen}
+            >
+              ☰
+            </button>
             <h1>AI Developer Assistant</h1>
           </div>
           {health && (
