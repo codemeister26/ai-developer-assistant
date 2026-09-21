@@ -19,6 +19,23 @@ def add_message(conversation_id:str, role:str, content:str):
 
         chat_repository.add_message(db, conversation_id, role, content)
 
+def get_conversation_messages(conversation_id: str):
+    """Conversation ke saare messages (UI ke liye, sirf last N nahi).
+
+    None return karta hai agar conversation hi exist nahi karti — taaki caller
+    khaali conversation aur missing conversation mein farak kar sake.
+    """
+    with get_db() as db:
+        if chat_repository.get_conversation(db, conversation_id) is None:
+            return None
+
+        messages = chat_repository.get_messages(db, conversation_id, limit=None)
+
+        return [
+            { "role": msg.role, "content": msg.content, "created_at": msg.created_at }
+            for msg in messages
+        ]
+
 def list_conversations() -> list:
     """Saari conversations ki summary — newest pehle"""
     with get_db() as db:

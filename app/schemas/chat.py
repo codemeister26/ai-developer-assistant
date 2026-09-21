@@ -36,3 +36,8 @@ class ChatResponse(BaseModel):
 class ConversationSummary(BaseModel):
     conversation_id: str
     created_at: datetime
+
+class MessageOut(BaseModel):
+    role: str
+    content: str
+    created_at: datetime

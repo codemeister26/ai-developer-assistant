@@ -1,8 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from app.schemas.chat import ChatRequest, ConversationSummary
+from app.schemas.chat import ChatRequest, ConversationSummary, MessageOut
 from app.services.chat_service import get_ai_response_stream
-from app.memory.chat_memory import clear_history, list_conversations
+from app.memory.chat_memory import (
+    clear_history,
+    get_conversation_messages,
+    list_conversations,
+)
 from typing import List
 import uuid
 
@@ -24,6 +28,14 @@ def chat(request: ChatRequest):
 def get_conversations():
     """Saari conversations list karo — newest pehle"""
     return list_conversations()
+
+@router.get("/chat/{conversation_id}", response_model=List[MessageOut])
+def get_chat(conversation_id: str):
+    """Ek conversation ke saare messages — purani chat dobara kholne ke liye"""
+    messages = get_conversation_messages(conversation_id)
+    if messages is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return messages
 
 @router.delete("/chat/{conversation_id}")
 def delete_chat(conversation_id: str):
