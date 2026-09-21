@@ -141,28 +141,35 @@ GRANT ALL ON SCHEMA public TO ai_user;
 \q
 ```
 
-> **Already have a database from an earlier version?**
-> Tables auto-create hoti hain, par maujooda tables update nahi hotin. Agar tumhara
-> `messages` table pehle se bana hua hai, ye index manually add karo:
+### 5. Create the database tables
+
+Schema Alembic manage karta hai — tables apne aap nahi banti:
+
+```bash
+alembic upgrade head
+```
+
+> **Pehle se database hai jisme tables maujood hain?**
+> Migration dobara mat chalao. Bas bata do ki wo already up to date hai:
 >
-> ```sql
-> CREATE INDEX IF NOT EXISTS ix_messages_conversation_id ON messages (conversation_id);
+> ```bash
+> alembic stamp head
 > ```
 
-### 5. Start Ollama
+### 6. Start Ollama
 
 ```bash
 ollama serve
 ollama run llama3.2:3b
 ```
 
-### 6. Start the server
+### 7. Start the server
 
 ```bash
 python3 -m uvicorn app.main:app --reload
 ```
 
-### 7. Open API docs
+### 8. Open API docs
 
 ```
 http://127.0.0.1:8000/docs
@@ -170,7 +177,31 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## Development Scripts
+## Development
+
+### Run tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Tests in-memory SQLite use karte hain — tumhare asli Postgres data ko haath nahi lagta.
+
+### Database migrations
+
+Jab bhi `app/db/models.py` badlo, migration banao:
+
+```bash
+alembic revision --autogenerate -m "kya badla"   # migration generate karo
+alembic upgrade head                             # apply karo
+alembic current                                  # abhi kis revision pe ho
+alembic check                                    # models aur DB match karte hain?
+alembic downgrade -1                             # pichhli migration undo karo
+```
+
+> Generated migration ko hamesha padh lo apply karne se pehle — autogenerate
+> sab kuch sahi detect nahi karta.
 
 ### Push changes to GitHub
 
