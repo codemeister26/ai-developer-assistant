@@ -26,6 +26,7 @@ This is not just a project. It is a learning journey from zero to production-gra
 - Streaming responses — token by token, just like ChatGPT
 - Multiple AI prompts — code review, debugging, explanation, architecture
 - Config-based model management — switch models in one place
+- React chat UI with streaming, conversation history and a stop button
 
 ---
 
@@ -34,11 +35,14 @@ This is not just a project. It is a learning journey from zero to production-gra
 | Layer | Technology |
 |-------|-----------|
 | Backend | Python, FastAPI |
+| Frontend | React, Vite |
 | AI Runtime | Ollama |
 | LLM Model | Llama 3.2 3B |
 | Database | PostgreSQL |
 | ORM | SQLAlchemy |
 | Validation | Pydantic |
+| Migrations | Alembic |
+| Tests | pytest |
 
 ---
 
@@ -53,6 +57,7 @@ backend/
 │   │
 │   ├── config/
 │   │   ├── settings.py      # All configuration — one place
+│   │   ├── logging_config.py  # Logging setup
 │   │   └── prompts.py       # AI system prompts
 │   │
 │   ├── db/
@@ -74,7 +79,16 @@ backend/
 │   │
 │   └── main.py              # Entry point — FastAPI app
 │
+├── alembic/                 # Database migrations
+│   └── versions/
+│
+├── tests/                   # pytest suite
+│
+├── frontend/                # React chat UI (apna README hai)
+│   └── src/
+│
 ├── requirements.txt
+├── requirements-dev.txt
 └── README.md
 ```
 
@@ -174,6 +188,16 @@ python3 -m uvicorn app.main:app --reload
 ```
 http://127.0.0.1:8000/docs
 ```
+
+### 9. Start the frontend (alag terminal mein)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Chat UI khulegi `http://localhost:5173` pe. Details: [frontend/README.md](frontend/README.md)
 
 ---
 
