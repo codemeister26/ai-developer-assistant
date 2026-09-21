@@ -18,7 +18,7 @@ def test_health_reports_unreachable_database_without_crashing(monkeypatch):
     def broken_session():
         raise Exception("database is down")
 
-    monkeypatch.setattr(health, "SessionLocal", broken_session)
+    monkeypatch.setattr(health, "get_db", broken_session)
     response = client.get("/health")
 
     assert response.status_code == 200
