@@ -36,6 +36,7 @@ class ChatResponse(BaseModel):
 class ConversationSummary(BaseModel):
     conversation_id: str
     created_at: datetime
+    title: Optional[str] = None   # pehla user message; khaali conversation mein None
 
 class MessageOut(BaseModel):
     role: str

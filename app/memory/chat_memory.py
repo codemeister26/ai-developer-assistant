@@ -42,7 +42,11 @@ def list_conversations() -> list:
         conversations = chat_repository.get_all_conversations(db)
 
         return [
-            { "conversation_id": c.id, "created_at": c.created_at }
+            {
+                "conversation_id": c.id,
+                "created_at": c.created_at,
+                "title": c.title,
+            }
             for c in conversations
         ]
 

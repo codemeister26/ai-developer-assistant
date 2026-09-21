@@ -19,6 +19,7 @@ export default function App() {
   const [error, setError] = useState(null)
   const [health, setHealth] = useState(null)
   const [draft, setDraft] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // Stop button isse stream beech mein cancel karta hai
   const abortRef = useRef(null)
@@ -121,7 +122,7 @@ export default function App() {
     } catch (err) {
       if (err.name === 'AbortError') {
         // User ne roka — backend jitna jawab bana tha wo save kar leta hai
-        setError('Response rok diya gaya. Jitna jawab aaya tha wo save ho chuka hai.')
+        setError('Response stopped. Whatever was generated has been saved.')
       } else {
         setError(err.message)
 
@@ -144,18 +145,31 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${sidebarOpen ? '' : 'sidebar-hidden'}`}>
       <ConversationList
         conversations={conversations}
         activeId={activeId}
+        isOpen={sidebarOpen}
         onSelect={selectConversation}
         onDelete={removeConversation}
         onNewChat={startNewChat}
+        onToggle={() => setSidebarOpen(false)}
       />
 
       <main className="chat">
         <header className="chat-header">
-          <h1>AI Developer Assistant</h1>
+          <div className="header-left">
+            {!sidebarOpen && (
+              <button
+                className="sidebar-toggle"
+                onClick={() => setSidebarOpen(true)}
+                title="Show sidebar"
+              >
+                ☰
+              </button>
+            )}
+            <h1>AI Developer Assistant</h1>
+          </div>
           {health && (
             <span className={`health ${health.database === 'ok' ? 'up' : 'down'}`}>
               database: {health.database}

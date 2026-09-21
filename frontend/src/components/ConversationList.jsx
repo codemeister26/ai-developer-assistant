@@ -7,22 +7,41 @@ function formatDate(value) {
   })
 }
 
+// Backend title ke roop mein pehla user message bhejta hai. Khaali conversation
+// mein wo null hota hai, tab id hi dikhate hain.
+function conversationName(conversation) {
+  const title = conversation.title?.trim()
+
+  if (!title) return `Untitled · ${conversation.conversation_id.slice(0, 8)}`
+  return title
+}
+
 export default function ConversationList({
   conversations,
   activeId,
+  isOpen,
   onSelect,
   onDelete,
   onNewChat,
+  onToggle,
 }) {
+  if (!isOpen) return null
+
   return (
     <aside className="sidebar">
-      <button className="new-chat" onClick={onNewChat}>
-        + New chat
-      </button>
+      <div className="sidebar-top">
+        <button className="new-chat" onClick={onNewChat}>
+          + New chat
+        </button>
+
+        <button className="sidebar-toggle" onClick={onToggle} title="Hide sidebar">
+          ‹
+        </button>
+      </div>
 
       <div className="conversation-list">
         {conversations.length === 0 && (
-          <p className="empty-note">Abhi koi conversation nahi hai.</p>
+          <p className="empty-note">No conversations yet.</p>
         )}
 
         {conversations.map((conversation) => {
@@ -30,12 +49,11 @@ export default function ConversationList({
           const isActive = id === activeId
 
           return (
-            <div
-              key={id}
-              className={`conversation ${isActive ? 'active' : ''}`}
-            >
+            <div key={id} className={`conversation ${isActive ? 'active' : ''}`}>
               <button className="conversation-open" onClick={() => onSelect(id)}>
-                <span className="conversation-id">{id.slice(0, 8)}</span>
+                <span className="conversation-title">
+                  {conversationName(conversation)}
+                </span>
                 <span className="conversation-date">
                   {formatDate(conversation.created_at)}
                 </span>

@@ -28,7 +28,7 @@ export default function MessageInput({ text, onTextChange, onSend, onStop, isStr
         value={text}
         onChange={(event) => onTextChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Apna sawaal likho... (Enter bhejne ke liye, Shift+Enter nayi line)"
+        placeholder="Ask anything about your code... (Enter to send, Shift+Enter for a new line)"
         rows={3}
       />
 

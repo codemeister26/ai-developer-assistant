@@ -13,7 +13,7 @@ export default function MessageList({ messages, isStreaming }) {
       <div className="messages empty">
         <div className="welcome">
           <h2>AI Developer Assistant</h2>
-          <p>Code review, debugging ya architecture ke baare mein kuch bhi poocho.</p>
+          <p>Ask anything about code review, debugging or architecture.</p>
         </div>
       </div>
     )
