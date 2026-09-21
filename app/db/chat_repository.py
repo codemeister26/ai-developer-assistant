@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from app.config.settings import HISTORY_MESSAGE_LIMIT
 from app.db.models import Conversation, Message
 
 def create_conversation(db: Session, conversation_id:str):
@@ -12,9 +13,9 @@ def get_conversation(db: Session, conversation_id: str):
     """Check karo ki conversation exist karti hai ya nahi"""
     return db.query(Conversation).filter(Conversation.id == conversation_id).first()
 
-def get_All_Conversation(db:Session):
-    # check for all convo
-    return db.query(Conversation).all()
+def get_all_conversations(db:Session):
+    """Saari conversations — newest pehle"""
+    return db.query(Conversation).order_by(Conversation.created_at.desc()).all()
 
 def add_message(db:Session, conversation_id:str, role:str, content:str):
      """Ek message conversation mein save karo"""
@@ -27,7 +28,7 @@ def add_message(db:Session, conversation_id:str, role:str, content:str):
      db.commit()
      return message
 
-def get_messages(db:Session, conversation_id:str, limit:int=10):
+def get_messages(db:Session, conversation_id:str, limit:int=HISTORY_MESSAGE_LIMIT):
     """Conversation ki last N messages do — context ke liye"""
     messages = (
         db.query(Message)

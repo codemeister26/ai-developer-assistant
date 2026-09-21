@@ -27,3 +27,18 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 # ─── Chat Limits ──────────────────────────────────────────────────────────────
 # Ek message max kitna lamba ho sakta hai — isse bade message reject ho jaate hain
 MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", "4000"))
+
+# Context ke liye pichhle kitne messages LLM ko bheje jaate hain.
+# Zyada rakhoge toh AI ko context zyada milega par response dheema hoga.
+HISTORY_MESSAGE_LIMIT = int(os.getenv("HISTORY_MESSAGE_LIMIT", "10"))
+
+# ─── CORS Settings ────────────────────────────────────────────────────────────
+# Kaun se frontend origins is API ko browser se call kar sakte hain.
+# Comma se alag karke likho, e.g. "http://localhost:3000,http://localhost:5173"
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
+    ).split(",")
+    if origin.strip()
+]

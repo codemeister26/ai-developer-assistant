@@ -28,6 +28,20 @@ def add_message(conversation_id:str, role:str, content:str):
     finally:
         db.close()
 
+def list_conversations() -> list:
+    """Saari conversations ki summary — newest pehle"""
+    db = SessionLocal()
+
+    try:
+        conversations = chat_repository.get_all_conversations(db)
+
+        return [
+            { "conversation_id": c.id, "created_at": c.created_at }
+            for c in conversations
+        ]
+    finally:
+        db.close()
+
 def clear_history(conversation_id: str) -> bool:
     """Conversation ki poori history permanently delete karo. Returns True agar conversation mili"""
     db = SessionLocal()

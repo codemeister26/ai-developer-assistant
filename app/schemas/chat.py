@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from app.config.settings import MAX_MESSAGE_LENGTH
+from datetime import datetime
 from typing import Optional
 import uuid
 
@@ -31,3 +32,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer:str
     conversation_id:str
+
+class ConversationSummary(BaseModel):
+    conversation_id: str
+    created_at: datetime
