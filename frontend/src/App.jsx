@@ -10,6 +10,7 @@ import {
 import ConversationList from './components/ConversationList'
 import MessageInput from './components/MessageInput'
 import MessageList from './components/MessageList'
+import SidebarToggle from './components/SidebarToggle'
 
 export default function App() {
   const [conversations, setConversations] = useState([])
@@ -159,14 +160,10 @@ export default function App() {
         <header className="chat-header">
           <div className="header-left">
             {/* Button hamesha yahin rehta hai — animation ke beech pop nahi karta */}
-            <button
-              className="sidebar-toggle"
-              onClick={() => setSidebarOpen((open) => !open)}
-              title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-              aria-expanded={sidebarOpen}
-            >
-              ☰
-            </button>
+            <SidebarToggle
+              isOpen={sidebarOpen}
+              onToggle={() => setSidebarOpen((open) => !open)}
+            />
             <h1>AI Developer Assistant</h1>
           </div>
           {health && (
