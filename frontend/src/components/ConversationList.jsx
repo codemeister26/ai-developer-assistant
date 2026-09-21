@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 function formatDate(value) {
   return new Date(value).toLocaleString(undefined, {
     day: 'numeric',
@@ -24,6 +26,27 @@ export default function ConversationList({
   onDelete,
   onNewChat,
 }) {
+  // Kis conversation ka delete confirm hona baaki hai — delete permanent hai,
+  // isliye ek baar poochte hain
+  const [confirmingId, setConfirmingId] = useState(null)
+
+  // Escape se confirmation cancel ho jaaye
+  useEffect(() => {
+    if (!confirmingId) return
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') setConfirmingId(null)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [confirmingId])
+
+  function confirmDelete(id) {
+    setConfirmingId(null)
+    onDelete(id)
+  }
+
   // Sidebar mount rehti hai taaki width smoothly animate ho sake. Band hone par
   // inert isse keyboard tab order aur screen readers se hata deta hai.
   return (
@@ -43,6 +66,34 @@ export default function ConversationList({
             const id = conversation.conversation_id
             const isActive = id === activeId
 
+            if (id === confirmingId) {
+              return (
+                <div key={id} className="conversation confirming">
+                  <p className="confirm-text">Delete this chat?</p>
+
+                  {/* Naam dikhana zaruri hai — warna pata nahi chalta kaun si
+                      chat delete ho rahi hai */}
+                  <p className="confirm-name">{conversationName(conversation)}</p>
+
+                  <div className="confirm-actions">
+                    <button
+                      className="confirm-yes"
+                      onClick={() => confirmDelete(id)}
+                      autoFocus
+                    >
+                      Delete
+                    </button>
+                    <button
+                      className="confirm-no"
+                      onClick={() => setConfirmingId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )
+            }
+
             return (
               <div key={id} className={`conversation ${isActive ? 'active' : ''}`}>
                 <button className="conversation-open" onClick={() => onSelect(id)}>
@@ -57,7 +108,8 @@ export default function ConversationList({
                 <button
                   className="conversation-delete"
                   title="Delete conversation"
-                  onClick={() => onDelete(id)}
+                  aria-label={`Delete conversation: ${conversationName(conversation)}`}
+                  onClick={() => setConfirmingId(id)}
                 >
                   ×
                 </button>

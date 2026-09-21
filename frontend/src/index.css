@@ -172,6 +172,72 @@ body {
   color: var(--danger);
 }
 
+/* ─── Delete confirmation ─────────────────────────────────────────────── */
+
+.conversation.confirming {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 10px;
+  background: #2a1c1c;
+  border: 1px solid #5c2626;
+}
+
+.confirm-text {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffb4b4;
+}
+
+/* Lamba naam do line ke baad cut ho jaata hai */
+.confirm-name {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.confirm-actions button {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.confirm-yes {
+  background: var(--danger);
+  color: #2a1010;
+  font-weight: 600;
+}
+
+.confirm-yes:hover {
+  filter: brightness(1.1);
+}
+
+.confirm-no {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.confirm-no:hover {
+  border-color: var(--muted);
+}
+
 /* ─── Chat area ───────────────────────────────────────────────────────── */
 
 .chat {
