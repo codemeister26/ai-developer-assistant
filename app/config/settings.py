@@ -13,9 +13,12 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")  # Ollama local
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")           # Use hone wala AI model
 
 # Alternative models (use karna ho toh .env mein OLLAMA_MODEL set karo):
-# OLLAMA_MODEL = "qwen2.5-coder:7b"   # coding ke liye kaafi behtar, par dheema
-# OLLAMA_MODEL = "qwen3:4b"
-# OLLAMA_MODEL = "qwen3:1.7b"
+# OLLAMA_MODEL = "qwen2.5-coder:7b"   # coding ke liye behtar, par bada aur dheema
+#
+# qwen3 models se bacho — wo reasoning models hain. Thinking off karne ke baad
+# bhi wo content mein sochte rehte hain: is machine pe "say hi in 3 words" ke
+# liye qwen3:4b ne 2616 tokens aur 229 second liye, jabki llama3.2:3b ne
+# 4 tokens aur 3 second.
 
 # Ollama tak pahunchne ka timeout (seconds)
 OLLAMA_CONNECT_TIMEOUT = float(os.getenv("OLLAMA_CONNECT_TIMEOUT", "10"))

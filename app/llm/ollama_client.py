@@ -40,7 +40,12 @@ def generate_response_stream(messages: list, mode: str = "general") -> Generator
                 {"role": "system", "content": get_prompt(mode)},
                 *messages
             ],
-            stream=True
+            stream=True,
+            # Reasoning models apni soch "thinking" field mein bhejte hain aur
+            # "content" khaali rakhte hain — hum sirf content stream karte hain,
+            # toh user ko blank screen dikhti. Jo models thinking support nahi
+            # karte, unpe ye flag bekaar hai par nuksaan nahi karta.
+            think=False,
         )
 
         for chunk in stream:
