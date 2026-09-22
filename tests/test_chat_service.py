@@ -37,7 +37,7 @@ def run_stream(monkeypatch, stream_fn, stop_after=None):
 
 
 def test_successful_response_is_saved(monkeypatch, saved):
-    def stream(history):
+    def stream(history, mode):
         yield "Hello"
         yield " world"
 
@@ -47,7 +47,7 @@ def test_successful_response_is_saved(monkeypatch, saved):
 
 def test_llm_failure_is_not_saved_to_history(monkeypatch, saved):
     """Error text history mein chala jaata tha aur agli baar LLM ko wapas milta tha"""
-    def stream(history):
+    def stream(history, mode):
         raise LLMUnavailableError("ollama down")
         yield   # pragma: no cover — isse function generator banta hai
 
@@ -56,7 +56,7 @@ def test_llm_failure_is_not_saved_to_history(monkeypatch, saved):
 
 
 def test_partial_response_saved_without_error_text(monkeypatch, saved):
-    def stream(history):
+    def stream(history, mode):
         yield "partial answer"
         raise LLMUnavailableError("ollama died mid-stream")
 
@@ -68,7 +68,7 @@ def test_partial_response_saved_without_error_text(monkeypatch, saved):
 
 def test_client_disconnect_keeps_partial_response(monkeypatch, saved):
     """Pehle disconnect pe poora jawab gum ho jaata tha"""
-    def stream(history):
+    def stream(history, mode):
         yield "chunk1"
         yield "chunk2"
         yield "chunk3"
@@ -78,10 +78,37 @@ def test_client_disconnect_keeps_partial_response(monkeypatch, saved):
 
 
 def test_error_text_never_reaches_history(monkeypatch, saved):
-    def stream(history):
+    def stream(history, mode):
         raise LLMUnavailableError("ollama down")
         yield   # pragma: no cover
 
     run_stream(monkeypatch, stream)
 
     assert all(AI_UNAVAILABLE_MESSAGE not in content for _, content in saved)
+
+
+def test_mode_reaches_the_llm_layer(monkeypatch, saved):
+    """Mode LLM tak na pahunche toh dropdown dikhega par kuch karega nahi"""
+    received = []
+
+    def stream(history, mode):
+        received.append(mode)
+        yield "ok"
+
+    monkeypatch.setattr(chat_service, "generate_response_stream", stream)
+    list(get_ai_response_stream("hello", str(uuid.uuid4()), mode="debug"))
+
+    assert received == ["debug"]
+
+
+def test_mode_defaults_to_general(monkeypatch, saved):
+    received = []
+
+    def stream(history, mode):
+        received.append(mode)
+        yield "ok"
+
+    monkeypatch.setattr(chat_service, "generate_response_stream", stream)
+    list(get_ai_response_stream("hello", str(uuid.uuid4())))
+
+    assert received == ["general"]

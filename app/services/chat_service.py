@@ -8,14 +8,18 @@ logger = logging.getLogger(__name__)
 # User ko dikhne wala fallback — ye kabhi history mein save nahi hota
 AI_UNAVAILABLE_MESSAGE = "AI service is currently unavailable."
 
-def get_ai_response_stream(message: str, conversation_id: str) -> Generator[str, None, None]:
+def get_ai_response_stream(
+    message: str,
+    conversation_id: str,
+    mode: str = "general",
+) -> Generator[str, None, None]:
     add_message(conversation_id=conversation_id, role="user", content=message)
 
     history = get_history(conversation_id)
     full_response = ""
 
     try:
-        for chunk in generate_response_stream(history):   # normal for ✅
+        for chunk in generate_response_stream(history, mode):   # normal for ✅
             full_response += chunk
             yield chunk
 

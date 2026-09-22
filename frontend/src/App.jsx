@@ -21,6 +21,7 @@ export default function App() {
   const [health, setHealth] = useState(null)
   const [draft, setDraft] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [mode, setMode] = useState('general')
 
   // Stop button isse stream beech mein cancel karta hai
   const abortRef = useRef(null)
@@ -103,6 +104,7 @@ export default function App() {
       const id = await sendMessage({
         message: text,
         conversationId: activeId,
+        mode,
         signal: controller.signal,
         onChunk: (chunk) => {
           receivedAnything = true
@@ -183,6 +185,8 @@ export default function App() {
           onSend={handleSend}
           onStop={handleStop}
           isStreaming={isStreaming}
+          mode={mode}
+          onModeChange={setMode}
         />
       </main>
     </div>

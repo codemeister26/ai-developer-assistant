@@ -1,8 +1,18 @@
+import ModeSelector from './ModeSelector'
+
 // Backend ka MAX_MESSAGE_LENGTH — yahan bhi rok lo taaki user ko turant pata chale
 const MAX_LENGTH = 4000
 
 // text App mein rehta hai taaki request fail hone par draft wapas laaya ja sake
-export default function MessageInput({ text, onTextChange, onSend, onStop, isStreaming }) {
+export default function MessageInput({
+  text,
+  onTextChange,
+  onSend,
+  onStop,
+  isStreaming,
+  mode,
+  onModeChange,
+}) {
   const trimmed = text.trim()
   const tooLong = text.length > MAX_LENGTH
   const canSend = trimmed.length > 0 && !tooLong && !isStreaming
@@ -33,6 +43,10 @@ export default function MessageInput({ text, onTextChange, onSend, onStop, isStr
       />
 
       <div className="composer-actions">
+        <ModeSelector value={mode} onChange={onModeChange} disabled={isStreaming} />
+
+        <span className="spacer" />
+
         <span className={`counter ${tooLong ? 'over' : ''}`}>
           {text.length} / {MAX_LENGTH}
         </span>

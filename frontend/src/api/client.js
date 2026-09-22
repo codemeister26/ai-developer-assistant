@@ -24,11 +24,15 @@ async function readError(response) {
  * onChunk har chunk pe call hota hai. Return karta hai conversation id, jo nayi
  * chat ke case mein backend X-Conversation-Id header se deta hai.
  */
-export async function sendMessage({ message, conversationId, signal, onChunk }) {
+export async function sendMessage({ message, conversationId, mode, signal, onChunk }) {
   const response = await fetch(`${API_URL}/api/v1/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, conversation_id: conversationId ?? null }),
+    body: JSON.stringify({
+      message,
+      conversation_id: conversationId ?? null,
+      mode: mode ?? 'general',
+    }),
     signal,
   })
 

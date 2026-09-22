@@ -13,8 +13,16 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")  # Ollama local
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")           # Use hone wala AI model
 
 # Alternative models (use karna ho toh .env mein OLLAMA_MODEL set karo):
+# OLLAMA_MODEL = "qwen2.5-coder:7b"   # coding ke liye kaafi behtar, par dheema
 # OLLAMA_MODEL = "qwen3:4b"
 # OLLAMA_MODEL = "qwen3:1.7b"
+
+# Ollama tak pahunchne ka timeout (seconds)
+OLLAMA_CONNECT_TIMEOUT = float(os.getenv("OLLAMA_CONNECT_TIMEOUT", "10"))
+
+# Do tokens ke beech max gap. Poore jawab ki limit nahi — lamba jawab chalta
+# rahega, par Ollama chup ho jaye toh request hamesha ke liye nahi latkegi.
+OLLAMA_READ_TIMEOUT = float(os.getenv("OLLAMA_READ_TIMEOUT", "60"))
 
 # ─── Database Settings ────────────────────────────────────────────────────────
 # Format: postgresql://username:password@host/database_name

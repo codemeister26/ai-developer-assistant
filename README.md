@@ -24,7 +24,8 @@ This is not just a project. It is a learning journey from zero to production-gra
 - Persistent conversation memory using PostgreSQL
 - Multi-conversation support with conversation IDs
 - Streaming responses — token by token, just like ChatGPT
-- Multiple AI prompts — code review, debugging, explanation, architecture
+- Six answer modes — general, code review, debug, explain, architecture, write code.
+  Har mode ka apna system prompt hai, UI se select kar sakte ho.
 - Config-based model management — switch models in one place
 - React chat UI with streaming, conversation history and a stop button
 

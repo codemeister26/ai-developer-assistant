@@ -1,19 +1,35 @@
 from ollama import Client
-from app.config.settings import OLLAMA_HOST, OLLAMA_MODEL
-from app.config.prompts import DEVELOPER_ASSISTANT_PROMPT
+from app.config.settings import (
+    OLLAMA_CONNECT_TIMEOUT,
+    OLLAMA_HOST,
+    OLLAMA_MODEL,
+    OLLAMA_READ_TIMEOUT,
+)
+from app.config.prompts import get_prompt
 from typing import Generator
+import httpx
 import logging
 import time
 
 logger = logging.getLogger(__name__)
 
-client = Client(OLLAMA_HOST)
+# read timeout do chunks ke beech ka gap hai, poore jawab ka nahi — isliye lamba
+# jawab bhi theek chalta hai, par Ollama chup ho jaye toh request latki nahi rehti
+client = Client(
+    OLLAMA_HOST,
+    timeout=httpx.Timeout(
+        connect=OLLAMA_CONNECT_TIMEOUT,
+        read=OLLAMA_READ_TIMEOUT,
+        write=OLLAMA_CONNECT_TIMEOUT,
+        pool=OLLAMA_CONNECT_TIMEOUT,
+    ),
+)
 
 
 class LLMUnavailableError(Exception):
     """Ollama se baat nahi ho payi — service layer decide karega user ko kya dikhana hai"""
 
-def generate_response_stream(messages: list) -> Generator[str, None, None]:
+def generate_response_stream(messages: list, mode: str = "general") -> Generator[str, None, None]:
     try:
         start = time.time()
         first_chunk = True
@@ -21,7 +37,7 @@ def generate_response_stream(messages: list) -> Generator[str, None, None]:
         stream = client.chat(
             model=OLLAMA_MODEL,
             messages=[
-                {"role": "system", "content": DEVELOPER_ASSISTANT_PROMPT},
+                {"role": "system", "content": get_prompt(mode)},
                 *messages
             ],
             stream=True

@@ -19,7 +19,8 @@ def chat(request: ChatRequest):
     return StreamingResponse(
         get_ai_response_stream(
            message=request.message,
-           conversation_id=conversation_id),
+           conversation_id=conversation_id,
+           mode=request.mode.value),
         media_type="text/plain",
         headers={"X-Conversation-Id": conversation_id}
     )

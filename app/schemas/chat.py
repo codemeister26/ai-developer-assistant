@@ -1,12 +1,23 @@
 from pydantic import BaseModel, Field, field_validator
 from app.config.settings import MAX_MESSAGE_LENGTH
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 import uuid
+
+class ChatMode(str, Enum):
+    """Kis tarah ka jawab chahiye — har mode ka apna system prompt hai"""
+    GENERAL = "general"
+    CODE_REVIEW = "code_review"
+    DEBUG = "debug"
+    EXPLAIN = "explain"
+    ARCHITECTURE = "architecture"
+    CODE_WRITING = "code_writing"
 
 class ChatRequest(BaseModel):
     message: str = Field(..., max_length=MAX_MESSAGE_LENGTH)
     conversation_id: Optional[str] = None
+    mode: ChatMode = ChatMode.GENERAL
 
     @field_validator("message")
     @classmethod

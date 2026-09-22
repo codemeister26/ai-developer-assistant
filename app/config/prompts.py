@@ -1,5 +1,22 @@
 # ─── AI Assistant Prompts ─────────────────────────────────────────────────────
 # Har situation ke liye alag prompt — AI better respond karta hai
+# Neeche PROMPTS registry hai; request ka "mode" decide karta hai kaun sa chale.
+
+# Har prompt ke saath ye rules jaate hain. Chhote local models confidently aisa
+# code likh dete hain jo chalta hi nahi — ye uske against hai.
+CODE_ACCURACY_RULES = """
+Rules for any code you write:
+- The code must actually run as written. Do not invent functions, methods,
+  arguments or libraries that do not exist.
+- Check whether a library is synchronous or asynchronous before using it.
+  Never `await` a synchronous call — for example `requests` is synchronous,
+  so use `httpx` or `aiohttp` when you need async HTTP.
+- `await` only works inside a function declared with `async def`.
+- Prefer the standard library and widely used packages over obscure ones.
+- If you are not sure an API exists or behaves the way you describe, say so
+  plainly instead of guessing.
+- Keep examples short and runnable rather than long and approximate.
+"""
 
 # ─── 1. General Developer Assistant ──────────────────────────────────────────
 DEVELOPER_ASSISTANT_PROMPT = """
@@ -98,3 +115,22 @@ When writing code:
 
 Remember: Code is read more than it is written — write for humans first.
 """
+
+# ─── Registry ─────────────────────────────────────────────────────────────────
+# Request ke "mode" se yahan se prompt uthta hai. Keys ChatMode enum se match
+# karni chahiye (tests isse check karte hain).
+
+PROMPTS = {
+    "general": DEVELOPER_ASSISTANT_PROMPT,
+    "code_review": CODE_REVIEW_PROMPT,
+    "debug": DEBUG_PROMPT,
+    "explain": EXPLAIN_PROMPT,
+    "architecture": ARCHITECTURE_PROMPT,
+    "code_writing": CODE_WRITING_PROMPT,
+}
+
+
+def get_prompt(mode: str) -> str:
+    """Mode ka prompt + code accuracy rules. Anjaan mode par general chalta hai."""
+    base = PROMPTS.get(mode, DEVELOPER_ASSISTANT_PROMPT)
+    return f"{base}\n{CODE_ACCURACY_RULES}"
