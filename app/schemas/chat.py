@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from app.config.settings import MAX_MESSAGE_LENGTH
+from app.llm.models import DEFAULT_MODEL
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -18,6 +19,9 @@ class ChatRequest(BaseModel):
     message: str = Field(..., max_length=MAX_MESSAGE_LENGTH)
     conversation_id: Optional[str] = None
     mode: ChatMode = ChatMode.GENERAL
+    # API key request body mein nahi aati — wo X-LLM-Api-Key header se aati hai,
+    # taaki galti se kisi log ya saved payload mein na chali jaye
+    model: str = DEFAULT_MODEL
 
     @field_validator("message")
     @classmethod
@@ -53,3 +57,10 @@ class MessageOut(BaseModel):
     role: str
     content: str
     created_at: datetime
+
+class ModelOut(BaseModel):
+    id: str
+    label: str
+    provider: str
+    needs_key: bool
+    note: str

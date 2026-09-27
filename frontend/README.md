@@ -36,6 +36,11 @@ npm run lint      # oxlint
 - **Validation** — khaali message aur 4000 se lamba message bhejne se pehle hi
   rok diya jaata hai (backend ki limit se match karta hai)
 - **Health badge** — database reachable hai ya nahi
+- **Model picker** — local Llama (free) ya Claude Haiku / Sonnet / Opus
+- **Bring your own key** — Claude ke liye Settings (⚙) mein apni Anthropic key
+  daalo. Key browser ke localStorage mein rehti hai aur har request ke saath
+  `X-LLM-Api-Key` header mein jaati hai — server use kabhi save nahi karta,
+  aur wo request body mein bhi nahi jaati.
 
 ## Backend endpoints jo use hote hain
 
@@ -45,6 +50,7 @@ npm run lint      # oxlint
 | `GET /api/v1/chat/{id}` | purani chat kholna |
 | `DELETE /api/v1/chat/{id}` | chat delete karna |
 | `GET /api/v1/conversations` | sidebar ki list |
+| `GET /api/v1/models` | model dropdown |
 | `GET /health` | header ka status badge |
 
 ## Structure

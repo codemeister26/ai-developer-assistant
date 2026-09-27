@@ -13,7 +13,7 @@ export default function ModeSelector({ value, onChange, disabled }) {
 
   return (
     <label className="mode-selector" title={active?.hint}>
-      <span className="mode-label">Mode</span>
+      <span className="field-label">Mode</span>
 
       <select
         value={value}

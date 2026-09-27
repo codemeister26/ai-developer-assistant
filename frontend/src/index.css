@@ -543,20 +543,28 @@ body {
   flex: 1;
 }
 
-/* ─── Mode selector ───────────────────────────────────────────────────── */
+/* ─── Mode / model selectors ──────────────────────────────────────────── */
 
-.mode-selector {
+.mode-selector,
+.model-selector {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.mode-label {
+.field-label {
   font-size: 12px;
   color: var(--muted);
 }
 
-.mode-selector select {
+/* Model ko key chahiye par set nahi hai — pehle se hint mil jaye */
+.model-selector select.needs-key {
+  border-color: #7a5a20;
+  color: #ffd79a;
+}
+
+.mode-selector select,
+.model-selector select {
   padding: 5px 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -567,13 +575,134 @@ body {
   cursor: pointer;
 }
 
-.mode-selector select:hover:not(:disabled) {
+.mode-selector select:hover:not(:disabled),
+.model-selector select:hover:not(:disabled) {
   border-color: var(--accent);
 }
 
-.mode-selector select:disabled {
+.mode-selector select:disabled,
+.model-selector select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ─── Header right / settings ─────────────────────────────────────────── */
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.settings-button:hover {
+  background: #21252e;
+  color: var(--text);
+}
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10;
+}
+
+.settings-panel {
+  width: 100%;
+  max-width: 440px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-panel h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.settings-field input {
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.settings-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.settings-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.settings-note a {
+  color: #7aa2ff;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-actions button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settings-cancel {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+}
+
+.settings-clear {
+  background: transparent !important;
+  border: 1px solid #5c2626 !important;
+  color: var(--danger) !important;
 }
 
 .counter {

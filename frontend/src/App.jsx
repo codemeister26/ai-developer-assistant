@@ -5,12 +5,35 @@ import {
   deleteConversation,
   fetchConversation,
   listConversations,
+  listModels,
   sendMessage,
 } from './api/client'
 import ConversationList from './components/ConversationList'
 import MessageInput from './components/MessageInput'
 import MessageList from './components/MessageList'
+import SettingsPanel from './components/SettingsPanel'
 import SidebarToggle from './components/SidebarToggle'
+
+const KEY_STORAGE = 'llm-api-key'
+const MODEL_STORAGE = 'llm-model'
+
+// localStorage private browsing mein throw kar sakta hai — app usse na ruke
+function readStored(name, fallback = '') {
+  try {
+    return localStorage.getItem(name) ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writeStored(name, value) {
+  try {
+    if (value) localStorage.setItem(name, value)
+    else localStorage.removeItem(name)
+  } catch {
+    // Storage band hai — key sirf is session ke liye memory mein rahegi
+  }
+}
 
 export default function App() {
   const [conversations, setConversations] = useState([])
@@ -22,6 +45,10 @@ export default function App() {
   const [draft, setDraft] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mode, setMode] = useState('general')
+  const [models, setModels] = useState([])
+  const [model, setModel] = useState(() => readStored(MODEL_STORAGE))
+  const [apiKey, setApiKey] = useState(() => readStored(KEY_STORAGE))
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   // Stop button isse stream beech mein cancel karta hai
   const abortRef = useRef(null)
@@ -34,10 +61,22 @@ export default function App() {
     }
   }, [])
 
-  // Mount pe backend se conversations aur health uthao
+  // Mount pe backend se conversations, models aur health uthao
   useEffect(() => {
     async function loadInitialData() {
       await loadConversations()
+
+      try {
+        const available = await listModels()
+        setModels(available)
+
+        // Pehle chuna hua model ab available na ho toh pehle wale par gir jao
+        setModel((current) =>
+          available.some((m) => m.id === current) ? current : available[0]?.id ?? ''
+        )
+      } catch (err) {
+        setError(err.message)
+      }
 
       try {
         setHealth(await checkHealth())
@@ -48,6 +87,16 @@ export default function App() {
 
     loadInitialData()
   }, [loadConversations])
+
+  function saveApiKey(key) {
+    setApiKey(key)
+    writeStored(KEY_STORAGE, key)
+  }
+
+  function changeModel(id) {
+    setModel(id)
+    writeStored(MODEL_STORAGE, id)
+  }
 
   async function selectConversation(id) {
     if (isStreaming) return
@@ -105,6 +154,8 @@ export default function App() {
         message: text,
         conversationId: activeId,
         mode,
+        model,
+        apiKey,
         signal: controller.signal,
         onChunk: (chunk) => {
           receivedAnything = true
@@ -168,11 +219,23 @@ export default function App() {
             />
             <h1>AI Developer Assistant</h1>
           </div>
-          {health && (
-            <span className={`health ${health.database === 'ok' ? 'up' : 'down'}`}>
-              database: {health.database}
-            </span>
-          )}
+
+          <div className="header-right">
+            {health && (
+              <span className={`health ${health.database === 'ok' ? 'up' : 'down'}`}>
+                database: {health.database}
+              </span>
+            )}
+
+            <button
+              className="settings-button"
+              onClick={() => setSettingsOpen(true)}
+              title="Settings"
+              aria-label="Settings"
+            >
+              ⚙
+            </button>
+          </div>
         </header>
 
         <MessageList messages={messages} isStreaming={isStreaming} />
@@ -187,8 +250,20 @@ export default function App() {
           isStreaming={isStreaming}
           mode={mode}
           onModeChange={setMode}
+          models={models}
+          model={model}
+          onModelChange={changeModel}
+          hasKey={Boolean(apiKey)}
         />
       </main>
+
+      {settingsOpen && (
+        <SettingsPanel
+          apiKey={apiKey}
+          onSave={saveApiKey}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -24,14 +24,27 @@ async function readError(response) {
  * onChunk har chunk pe call hota hai. Return karta hai conversation id, jo nayi
  * chat ke case mein backend X-Conversation-Id header se deta hai.
  */
-export async function sendMessage({ message, conversationId, mode, signal, onChunk }) {
+export async function sendMessage({
+  message,
+  conversationId,
+  mode,
+  model,
+  apiKey,
+  signal,
+  onChunk,
+}) {
   const response = await fetch(`${API_URL}/api/v1/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      // Key header mein jaati hai, body mein nahi — body log ho sakti hai
+      ...(apiKey ? { 'X-LLM-Api-Key': apiKey } : {}),
+    },
     body: JSON.stringify({
       message,
       conversation_id: conversationId ?? null,
       mode: mode ?? 'general',
+      model,
     }),
     signal,
   })
@@ -54,6 +67,13 @@ export async function sendMessage({ message, conversationId, mode, signal, onChu
   }
 
   return id
+}
+
+export async function listModels() {
+  const response = await fetch(`${API_URL}/api/v1/models`)
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
 }
 
 export async function listConversations() {

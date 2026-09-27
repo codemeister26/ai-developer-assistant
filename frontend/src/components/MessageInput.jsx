@@ -1,4 +1,5 @@
 import ModeSelector from './ModeSelector'
+import ModelSelector from './ModelSelector'
 
 // Backend ka MAX_MESSAGE_LENGTH — yahan bhi rok lo taaki user ko turant pata chale
 const MAX_LENGTH = 4000
@@ -12,6 +13,10 @@ export default function MessageInput({
   isStreaming,
   mode,
   onModeChange,
+  models,
+  model,
+  onModelChange,
+  hasKey,
 }) {
   const trimmed = text.trim()
   const tooLong = text.length > MAX_LENGTH
@@ -43,6 +48,14 @@ export default function MessageInput({
       />
 
       <div className="composer-actions">
+        <ModelSelector
+          models={models}
+          value={model}
+          onChange={onModelChange}
+          disabled={isStreaming}
+          hasKey={hasKey}
+        />
+
         <ModeSelector value={mode} onChange={onModeChange} disabled={isStreaming} />
 
         <span className="spacer" />

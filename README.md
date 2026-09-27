@@ -26,7 +26,11 @@ This is not just a project. It is a learning journey from zero to production-gra
 - Streaming responses — token by token, just like ChatGPT
 - Six answer modes — general, code review, debug, explain, architecture, write code.
   Har mode ka apna system prompt hai, UI se select kar sakte ho.
-- Config-based model management — switch models in one place
+- Multiple models — local Ollama (free) ya Claude (Haiku / Sonnet / Opus).
+  UI ke dropdown se switch karo.
+- Bring your own key — Claude ke liye apni API key Settings mein daalo. Key
+  browser mein rehti hai, server use kabhi save nahi karta.
+- Provider abstraction — naya provider add karna ek file ka kaam hai
 - React chat UI with streaming, conversation history and a stop button
 
 ---
@@ -67,7 +71,11 @@ backend/
 │   │   └── chat_repository.py  # All database operations
 │   │
 │   ├── llm/
-│   │   └── ollama_client.py # Ollama integration + streaming
+│   │   ├── base.py          # LLMProvider interface + errors
+│   │   ├── models.py        # Model catalog — kaun sa model kis provider ka
+│   │   ├── factory.py       # Model dekhkar sahi provider deta hai
+│   │   ├── ollama_provider.py     # Local models
+│   │   └── anthropic_provider.py  # Claude (BYOK)
 │   │
 │   ├── memory/
 │   │   └── chat_memory.py   # Conversation history management

@@ -27,6 +27,11 @@ OLLAMA_CONNECT_TIMEOUT = float(os.getenv("OLLAMA_CONNECT_TIMEOUT", "10"))
 # rahega, par Ollama chup ho jaye toh request hamesha ke liye nahi latkegi.
 OLLAMA_READ_TIMEOUT = float(os.getenv("OLLAMA_READ_TIMEOUT", "60"))
 
+# ─── Anthropic (Claude) Settings ──────────────────────────────────────────────
+# Ek jawab max kitna lamba ho sakta hai. Ye cost cap hai — API par har token ke
+# paise lagte hain, aur chat ke jawab itne lambe hote hi nahi.
+ANTHROPIC_MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS", "8192"))
+
 # ─── Database Settings ────────────────────────────────────────────────────────
 # Format: postgresql://username:password@host/database_name
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://ai_user:ai_password@localhost/ai_assistant")

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import StreamingResponse
-from app.schemas.chat import ChatRequest, ConversationSummary, MessageOut
+from app.llm.models import MODELS
+from app.schemas.chat import ChatRequest, ConversationSummary, MessageOut, ModelOut
 from app.services.chat_service import get_ai_response_stream
 from app.memory.chat_memory import (
     clear_history,
@@ -13,17 +14,29 @@ import uuid
 router = APIRouter(prefix="/api/v1", tags=["Chat"])
 
 @router.post("/chat")
-def chat(request: ChatRequest):
+def chat(
+    request: ChatRequest,
+    # Key header mein aati hai, body mein nahi — body log ya save ho sakti hai.
+    # Server ise kabhi store nahi karta, sirf is request ke liye use karta hai.
+    x_llm_api_key: str | None = Header(default=None),
+):
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
     return StreamingResponse(
         get_ai_response_stream(
            message=request.message,
            conversation_id=conversation_id,
-           mode=request.mode.value),
+           mode=request.mode.value,
+           model=request.model,
+           api_key=x_llm_api_key),
         media_type="text/plain",
         headers={"X-Conversation-Id": conversation_id}
     )
+
+@router.get("/models", response_model=List[ModelOut])
+def get_models():
+    """Kaun se models available hain — dropdown yahi list use karta hai"""
+    return MODELS
 
 @router.get("/conversations", response_model=List[ConversationSummary])
 def get_conversations():
