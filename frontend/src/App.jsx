@@ -6,7 +6,9 @@ import {
   fetchConversation,
   listConversations,
   listModels,
+  regenerate,
   sendMessage,
+  truncateFrom,
 } from './api/client'
 import ConversationList from './components/ConversationList'
 import MessageInput from './components/MessageInput'
@@ -43,7 +45,8 @@ export default function App() {
   const [error, setError] = useState(null)
   const [health, setHealth] = useState(null)
   const [draft, setDraft] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // Phone par sidebar poori screen dhak leti hai — wahan band se shuru karo
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 700)
   const [mode, setMode] = useState('general')
   const [models, setModels] = useState([])
   const [model, setModel] = useState(() => readStored(MODEL_STORAGE))
@@ -104,7 +107,11 @@ export default function App() {
 
     try {
       const history = await fetchConversation(id)
-      setMessages(history.map(({ role, content }) => ({ role, content })))
+      setMessages(history.map(({ id: messageId, role, content }) => ({
+        id: messageId,
+        role,
+        content,
+      })))
       setActiveId(id)
     } catch (err) {
       setError(err.message)
@@ -128,6 +135,20 @@ export default function App() {
       await loadConversations()
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  /**
+   * Stream ke baad server se messages dobara lao — taaki unke id mil jayein.
+   * Edit-and-resend ko id chahiye hoti hai, aur optimistic bubbles mein wo
+   * hoti nahi.
+   */
+  async function refreshMessages(conversationId) {
+    try {
+      const history = await fetchConversation(conversationId)
+      setMessages(history.map(({ id, role, content }) => ({ id, role, content })))
+    } catch {
+      // Refresh fail hua toh jo screen par hai wahi rehne do
     }
   }
 
@@ -173,6 +194,8 @@ export default function App() {
         setActiveId(id)
         await loadConversations()
       }
+
+      if (id) await refreshMessages(id)
     } catch (err) {
       if (err.name === 'AbortError') {
         // User ne roka — backend jitna jawab bana tha wo save kar leta hai
@@ -194,6 +217,69 @@ export default function App() {
     }
   }
 
+  async function handleRegenerate() {
+    if (isStreaming || !activeId) return
+
+    setError(null)
+    setIsStreaming(true)
+
+    // Purana jawab hata ke khaali bubble lagao — usi mein naya bharega
+    setMessages((current) => [
+      ...current.slice(0, -1),
+      { role: 'assistant', content: '' },
+    ])
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      await regenerate({
+        conversationId: activeId,
+        mode,
+        model,
+        apiKey,
+        signal: controller.signal,
+        onChunk: (chunk) => {
+          setMessages((current) => {
+            const updated = [...current]
+            const last = updated[updated.length - 1]
+            updated[updated.length - 1] = { ...last, content: last.content + chunk }
+            return updated
+          })
+        },
+      })
+
+      await refreshMessages(activeId)
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        setError('Response stopped. Whatever was generated has been saved.')
+      } else {
+        setError(err.message)
+      }
+    } finally {
+      setIsStreaming(false)
+      abortRef.current = null
+    }
+  }
+
+  async function handleEdit(message) {
+    if (isStreaming || !activeId) return
+    setError(null)
+
+    try {
+      // Purana sawaal aur uske baad ka sab hatao, phir naya sawaal bhejenge
+      await truncateFrom(activeId, message.id)
+
+      setMessages((current) => {
+        const index = current.findIndex((m) => m.id === message.id)
+        return index === -1 ? current : current.slice(0, index)
+      })
+      setDraft(message.content)   // purana text input mein, wahan edit karo
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   function handleStop() {
     abortRef.current?.abort()
   }
@@ -208,6 +294,12 @@ export default function App() {
         onDelete={removeConversation}
         onNewChat={startNewChat}
       />
+
+      {/* Phone par sidebar overlay hoti hai — bahar tap karke band ho jaye.
+          Desktop par ye CSS se chhupa rehta hai. */}
+      {sidebarOpen && (
+        <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
 
       <main className="chat">
         <header className="chat-header">
@@ -238,7 +330,12 @@ export default function App() {
           </div>
         </header>
 
-        <MessageList messages={messages} isStreaming={isStreaming} />
+        <MessageList
+          messages={messages}
+          isStreaming={isStreaming}
+          onRegenerate={handleRegenerate}
+          onEdit={handleEdit}
+        />
 
         {error && <div className="error">{error}</div>}
 

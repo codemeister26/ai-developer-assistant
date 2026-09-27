@@ -62,6 +62,36 @@ def get_messages(db:Session, conversation_id:str, limit:int=HISTORY_MESSAGE_LIMI
     )
     return list(reversed(messages))
 
+def delete_messages_from(db: Session, conversation_id: str, message_id: int) -> int:
+    """Is message ko aur uske baad ke sabko hatao. Returns kitne delete hue.
+
+    Edit-and-resend ke liye: purana sawaal aur uske baad ka sab jaata hai, phir
+    naya sawaal add hota hai.
+    """
+    deleted = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id, Message.id >= message_id)
+        .delete()
+    )
+    db.commit()
+    return deleted
+
+def delete_trailing_assistant_message(db: Session, conversation_id: str) -> bool:
+    """Aakhri message agar assistant ka hai toh hatao — regenerate ke liye"""
+    last = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+
+    if last is None or last.role != "assistant":
+        return False
+
+    db.delete(last)
+    db.commit()
+    return True
+
 def delete_conversation(db: Session, conversation_id: str) -> bool:
     """Conversation aur uske saare messages delete karo. Returns True agar conversation exist karti thi"""
     db.query(Message).filter(Message.conversation_id == conversation_id).delete()

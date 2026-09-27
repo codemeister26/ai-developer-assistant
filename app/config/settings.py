@@ -46,7 +46,12 @@ MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", "4000"))
 
 # Context ke liye pichhle kitne messages LLM ko bheje jaate hain.
 # Zyada rakhoge toh AI ko context zyada milega par response dheema hoga.
-HISTORY_MESSAGE_LIMIT = int(os.getenv("HISTORY_MESSAGE_LIMIT", "10"))
+HISTORY_MESSAGE_LIMIT = int(os.getenv("HISTORY_MESSAGE_LIMIT", "20"))
+
+# Sirf message count kaafi nahi hai — 20 chhote messages aur 20 bade messages
+# mein zameen-aasmaan ka farak hai. Ye character budget asli guard hai
+# (roughly 4 characters = 1 token, toh 16000 chars ≈ 4000 tokens).
+HISTORY_CHAR_BUDGET = int(os.getenv("HISTORY_CHAR_BUDGET", "16000"))
 
 # ─── CORS Settings ────────────────────────────────────────────────────────────
 # Kaun se frontend origins is API ko browser se call kar sakte hain.

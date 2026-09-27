@@ -1,8 +1,14 @@
 import { useEffect, useRef } from 'react'
 
 import Markdown from './Markdown'
+import MessageActions from './MessageActions'
 
-export default function MessageList({ messages, isStreaming }) {
+export default function MessageList({
+  messages,
+  isStreaming,
+  onRegenerate,
+  onEdit,
+}) {
   const bottomRef = useRef(null)
 
   // Naya content aane par apne aap neeche scroll karo
@@ -21,6 +27,8 @@ export default function MessageList({ messages, isStreaming }) {
     )
   }
 
+  const lastAssistant = messages.findLastIndex((m) => m.role === 'assistant')
+
   return (
     <div className="messages">
       {messages.map((message, index) => {
@@ -28,8 +36,12 @@ export default function MessageList({ messages, isStreaming }) {
         const isAssistant = message.role === 'assistant'
         const showCursor = isStreaming && isLast && isAssistant
 
+        // Regenerate sirf aakhri jawab par — beech ka jawab badalne se uske
+        // baad ki poori chat bemaani ho jaati hai
+        const canRegenerate = isAssistant && index === lastAssistant
+
         return (
-          <div key={index} className={`message ${message.role}`}>
+          <div key={message.id ?? index} className={`message ${message.role}`}>
             <div className="role">{isAssistant ? 'Assistant' : 'You'}</div>
 
             <div className="content">
@@ -43,6 +55,15 @@ export default function MessageList({ messages, isStreaming }) {
 
               {showCursor && <span className="cursor" />}
             </div>
+
+            {!showCursor && (
+              <MessageActions
+                content={message.content}
+                disabled={isStreaming}
+                onRegenerate={canRegenerate ? () => onRegenerate() : null}
+                onEdit={!isAssistant ? () => onEdit(message, index) : null}
+              />
+            )}
           </div>
         )
       })}

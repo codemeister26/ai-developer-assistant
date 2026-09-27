@@ -43,6 +43,11 @@ body {
   --sidebar-width: 0px;
 }
 
+/* Backdrop sirf phone par chahiye — desktop par sidebar overlay nahi hai */
+.sidebar-backdrop {
+  display: none;
+}
+
 /* ─── Sidebar ─────────────────────────────────────────────────────────── */
 
 .sidebar {
@@ -480,6 +485,42 @@ body {
   background: var(--user-bubble);
 }
 
+/* ─── Message actions ─────────────────────────────────────────────────── */
+
+.message-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  /* Desktop par hover tak chhupe rehte hain — chat saaf dikhti hai */
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.message:hover .message-actions,
+.message-actions:focus-within {
+  opacity: 1;
+}
+
+.message-actions button {
+  padding: 4px 9px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.message-actions button:hover:not(:disabled) {
+  background: #21252e;
+  color: var(--text);
+}
+
+.message-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Streaming ke waqt blinking cursor */
 .cursor {
   display: inline-block;
@@ -731,4 +772,89 @@ body {
 
 .composer button.stop {
   background: var(--danger);
+}
+
+/* ─── Mobile ──────────────────────────────────────────────────────────────
+   Phone par sidebar jagah ghere toh chat ke liye kuch bachta hi nahi, isliye
+   wahan wo overlay ban jaati hai — chat hamesha poori chaudai leti hai.       */
+
+@media (max-width: 700px) {
+  .app,
+  .app.sidebar-hidden {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 260px;
+    z-index: 20;
+    border-right: 1px solid var(--border);
+    transform: translateX(0);
+    transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .app.sidebar-hidden .sidebar {
+    transform: translateX(-100%);
+  }
+
+  /* Sidebar khuli ho toh peeche ka content dab jaaye, aur bahar tap karne se
+     sidebar band ho jaye */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 15;
+  }
+
+  .chat-header {
+    padding: 12px 14px;
+  }
+
+  .chat-header h1 {
+    font-size: 15px;
+  }
+
+  /* Health badge phone par jagah khata hai — toggle aur settings zaruri hain */
+  .health {
+    display: none;
+  }
+
+  .messages {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .composer {
+    padding: 10px 14px;
+  }
+
+  .composer textarea {
+    font-size: 16px;   /* 16px se kam par iOS zoom kar deta hai */
+  }
+
+  .composer-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .spacer {
+    display: none;
+  }
+
+  .counter {
+    margin-left: auto;
+  }
+
+  /* Phone par hover hota hi nahi — actions hamesha dikhne chahiye */
+  .message-actions {
+    opacity: 1;
+  }
+
+  .settings-panel {
+    max-width: 100%;
+  }
 }

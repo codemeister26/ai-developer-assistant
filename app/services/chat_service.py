@@ -2,7 +2,7 @@ from app.config.prompts import get_prompt
 from app.llm.base import LLMAuthError, LLMUnavailableError
 from app.llm.factory import get_provider
 from app.llm.models import DEFAULT_MODEL
-from app.memory.chat_memory import get_history, add_message
+from app.memory.chat_memory import add_message, drop_last_assistant_message, get_history
 from typing import Generator
 import logging
 
@@ -20,7 +20,29 @@ def get_ai_response_stream(
     api_key: str | None = None,
 ) -> Generator[str, None, None]:
     add_message(conversation_id=conversation_id, role="user", content=message)
+    yield from _stream_reply(conversation_id, mode, model, api_key)
 
+
+def regenerate_response_stream(
+    conversation_id: str,
+    mode: str = "general",
+    model: str = DEFAULT_MODEL,
+    api_key: str | None = None,
+) -> Generator[str, None, None]:
+    """Purana jawab hatao aur wahi sawaal dobara bhejo.
+
+    User ka message dobara add nahi hota — wo pehle se history mein hai.
+    """
+    drop_last_assistant_message(conversation_id)
+    yield from _stream_reply(conversation_id, mode, model, api_key)
+
+
+def _stream_reply(
+    conversation_id: str,
+    mode: str,
+    model: str,
+    api_key: str | None,
+) -> Generator[str, None, None]:
     history = get_history(conversation_id)
     full_response = ""
 

@@ -69,6 +69,42 @@ export async function sendMessage({
   return id
 }
 
+/** Aakhri jawab hatao aur naya banao — user ka sawaal wahi rehta hai */
+export async function regenerate({ conversationId, mode, model, apiKey, signal, onChunk }) {
+  const response = await fetch(`${API_URL}/api/v1/chat/${conversationId}/regenerate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { 'X-LLM-Api-Key': apiKey } : {}),
+    },
+    body: JSON.stringify({ mode: mode ?? 'general', model }),
+    signal,
+  })
+
+  if (!response.ok) throw new Error(await readError(response))
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    onChunk(decoder.decode(value, { stream: true }))
+  }
+}
+
+/** Is message se aage ka sab hatao — edit karke dobara bhejne se pehle */
+export async function truncateFrom(conversationId, messageId) {
+  const response = await fetch(
+    `${API_URL}/api/v1/chat/${conversationId}/messages/${messageId}`,
+    { method: 'DELETE' }
+  )
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
 export async function listModels() {
   const response = await fetch(`${API_URL}/api/v1/models`)
 

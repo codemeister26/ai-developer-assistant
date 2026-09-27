@@ -44,6 +44,11 @@ class ChatRequest(BaseModel):
             raise ValueError("conversation_id must be a valid UUID")
         return value
 
+class RegenerateRequest(BaseModel):
+    """Regenerate mein naya message nahi jaata — sirf mode aur model chahiye"""
+    mode: ChatMode = ChatMode.GENERAL
+    model: str = DEFAULT_MODEL
+
 class ChatResponse(BaseModel):
     answer:str
     conversation_id:str
@@ -54,6 +59,7 @@ class ConversationSummary(BaseModel):
     title: Optional[str] = None   # pehla user message; khaali conversation mein None
 
 class MessageOut(BaseModel):
+    id: int          # edit-and-resend ko yahan se truncate karna hota hai
     role: str
     content: str
     created_at: datetime
