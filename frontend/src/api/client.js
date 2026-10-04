@@ -154,8 +154,34 @@ export async function listModels() {
   return response.json()
 }
 
-export async function listConversations() {
-  const response = await fetch(`${API_URL}/api/v1/conversations`)
+export async function listConversations(search = '') {
+  const query = search ? `?search=${encodeURIComponent(search)}` : ''
+  const response = await fetch(`${API_URL}/api/v1/conversations${query}`)
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function renameConversation(conversationId, title) {
+  const response = await fetch(`${API_URL}/api/v1/conversations/${conversationId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),   // null bhejo toh auto-title wapas
+  })
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function setPinned(conversationId, pinned) {
+  const response = await fetch(
+    `${API_URL}/api/v1/conversations/${conversationId}/pin`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pinned }),
+    }
+  )
 
   if (!response.ok) throw new Error(await readError(response))
   return response.json()

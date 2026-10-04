@@ -9,8 +9,8 @@ function formatDate(value) {
   })
 }
 
-// Backend title ke roop mein pehla user message bhejta hai. Khaali conversation
-// mein wo null hota hai, tab id hi dikhate hain.
+// Backend title ke roop mein custom naam deta hai, warna pehla user message.
+// Khaali conversation mein wo null hota hai, tab id dikhate hain.
 function conversationName(conversation) {
   const title = conversation.title?.trim()
 
@@ -22,29 +22,49 @@ export default function ConversationList({
   conversations,
   activeId,
   isOpen,
+  search,
+  onSearchChange,
   onSelect,
   onDelete,
+  onRename,
+  onTogglePin,
   onNewChat,
 }) {
   // Kis conversation ka delete confirm hona baaki hai — delete permanent hai,
   // isliye ek baar poochte hain
   const [confirmingId, setConfirmingId] = useState(null)
+  const [renamingId, setRenamingId] = useState(null)
+  const [draftName, setDraftName] = useState('')
 
-  // Escape se confirmation cancel ho jaaye
+  // Escape se confirmation ya rename cancel ho jaaye
   useEffect(() => {
-    if (!confirmingId) return
+    if (!confirmingId && !renamingId) return
 
     function handleKeyDown(event) {
-      if (event.key === 'Escape') setConfirmingId(null)
+      if (event.key === 'Escape') {
+        setConfirmingId(null)
+        setRenamingId(null)
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [confirmingId])
+  }, [confirmingId, renamingId])
 
   function confirmDelete(id) {
     setConfirmingId(null)
     onDelete(id)
+  }
+
+  function startRename(conversation) {
+    setRenamingId(conversation.conversation_id)
+    setDraftName(conversationName(conversation))
+  }
+
+  function saveRename(event, id) {
+    event.preventDefault()
+    setRenamingId(null)
+    onRename(id, draftName.trim() || null)   // khaali chhodo toh auto-title wapas
   }
 
   // Sidebar mount rehti hai taaki width smoothly animate ho sake. Band hone par
@@ -57,9 +77,20 @@ export default function ConversationList({
           + New chat
         </button>
 
+        <input
+          className="search-box"
+          type="search"
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Search chats..."
+          aria-label="Search conversations"
+        />
+
         <div className="conversation-list">
           {conversations.length === 0 && (
-            <p className="empty-note">No conversations yet.</p>
+            <p className="empty-note">
+              {search ? 'No chats match that search.' : 'No conversations yet.'}
+            </p>
           )}
 
           {conversations.map((conversation) => {
@@ -94,10 +125,30 @@ export default function ConversationList({
               )
             }
 
+            if (id === renamingId) {
+              return (
+                <form
+                  key={id}
+                  className="conversation renaming"
+                  onSubmit={(event) => saveRename(event, id)}
+                >
+                  <input
+                    value={draftName}
+                    onChange={(event) => setDraftName(event.target.value)}
+                    onBlur={(event) => saveRename(event, id)}
+                    autoFocus
+                    maxLength={200}
+                    aria-label="Conversation name"
+                  />
+                </form>
+              )
+            }
+
             return (
               <div key={id} className={`conversation ${isActive ? 'active' : ''}`}>
                 <button className="conversation-open" onClick={() => onSelect(id)}>
                   <span className="conversation-title">
+                    {conversation.pinned && <span className="pin-mark">📌 </span>}
                     {conversationName(conversation)}
                   </span>
                   <span className="conversation-date">
@@ -105,14 +156,32 @@ export default function ConversationList({
                   </span>
                 </button>
 
-                <button
-                  className="conversation-delete"
-                  title="Delete conversation"
-                  aria-label={`Delete conversation: ${conversationName(conversation)}`}
-                  onClick={() => setConfirmingId(id)}
-                >
-                  ×
-                </button>
+                <div className="conversation-actions">
+                  <button
+                    title={conversation.pinned ? 'Unpin' : 'Pin to top'}
+                    aria-label={conversation.pinned ? 'Unpin' : 'Pin to top'}
+                    onClick={() => onTogglePin(id, !conversation.pinned)}
+                  >
+                    {conversation.pinned ? '📌' : '📍'}
+                  </button>
+
+                  <button
+                    title="Rename"
+                    aria-label="Rename conversation"
+                    onClick={() => startRename(conversation)}
+                  >
+                    ✎
+                  </button>
+
+                  <button
+                    className="conversation-delete"
+                    title="Delete conversation"
+                    aria-label={`Delete conversation: ${conversationName(conversation)}`}
+                    onClick={() => setConfirmingId(id)}
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             )
           })}

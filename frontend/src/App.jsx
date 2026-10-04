@@ -7,7 +7,9 @@ import {
   listConversations,
   listModels,
   regenerate,
+  renameConversation,
   sendMessage,
+  setPinned,
   truncateFrom,
 } from './api/client'
 import ConversationList from './components/ConversationList'
@@ -54,6 +56,7 @@ export default function App() {
   const [model, setModel] = useState(() => readStored(MODEL_STORAGE))
   const [apiKey, setApiKey] = useState(() => readStored(KEY_STORAGE))
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [search, setSearch] = useState('')
 
   // Stop button isse stream beech mein cancel karta hai
   const abortRef = useRef(null)
@@ -69,19 +72,42 @@ export default function App() {
     setErrorKind(null)
   }
 
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async (term = '') => {
     try {
-      setConversations(await listConversations())
+      setConversations(await listConversations(term))
     } catch (err) {
       showError(err)
     }
   }, [])
 
-  // Mount pe backend se conversations, models aur health uthao
+  // Har keystroke par request na jaaye — type rukne ke baad hi search karo
+  useEffect(() => {
+    const timer = setTimeout(() => loadConversations(search), 250)
+    return () => clearTimeout(timer)
+  }, [search, loadConversations])
+
+  async function handleRename(id, title) {
+    try {
+      await renameConversation(id, title)
+      await loadConversations(search)
+    } catch (err) {
+      showError(err)
+    }
+  }
+
+  async function handleTogglePin(id, pinned) {
+    try {
+      await setPinned(id, pinned)
+      await loadConversations(search)
+    } catch (err) {
+      showError(err)
+    }
+  }
+
+  // Mount pe models aur health uthao. Conversations upar wala search effect
+  // laata hai, isliye yahan dobara nahi maangte.
   useEffect(() => {
     async function loadInitialData() {
-      await loadConversations()
-
       try {
         const available = await listModels()
         setModels(available)
@@ -145,7 +171,7 @@ export default function App() {
     try {
       await deleteConversation(id)
       if (id === activeId) startNewChat()
-      await loadConversations()
+      await loadConversations(search)
     } catch (err) {
       showError(err)
     }
@@ -205,7 +231,7 @@ export default function App() {
       // Nayi chat thi toh ab uska id mil gaya
       if (!activeId && id) {
         setActiveId(id)
-        await loadConversations()
+        await loadConversations(search)
       }
 
       if (id) await refreshMessages(id)
@@ -303,8 +329,12 @@ export default function App() {
         conversations={conversations}
         activeId={activeId}
         isOpen={sidebarOpen}
+        search={search}
+        onSearchChange={setSearch}
         onSelect={selectConversation}
         onDelete={removeConversation}
+        onRename={handleRename}
+        onTogglePin={handleTogglePin}
         onNewChat={startNewChat}
       />
 

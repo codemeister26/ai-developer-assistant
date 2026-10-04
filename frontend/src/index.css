@@ -164,13 +164,80 @@ body {
   color: var(--muted);
 }
 
+.search-box {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.search-box:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.pin-mark {
+  font-size: 11px;
+}
+
+/* Actions hover par hi dikhte hain — warna 260px ki sidebar bhari lagti hai */
+.conversation-actions {
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.conversation:hover .conversation-actions,
+.conversation-actions:focus-within {
+  opacity: 1;
+}
+
+/* Pinned chat ka icon hamesha dikhe, warna pata nahi chalega ki pin hai */
+.conversation:has(.pin-mark) .conversation-actions {
+  opacity: 1;
+}
+
+.conversation-actions button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 5px;
+  border-radius: 4px;
+}
+
+.conversation-actions button:hover {
+  background: #2a2f3a;
+  color: var(--text);
+}
+
+.conversation.renaming input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.conversation.renaming input:focus {
+  outline: none;
+}
+
 .conversation-delete {
   background: none;
   border: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 18px;
-  padding: 0 10px;
+  font-size: 16px;
+  padding: 0 8px;
 }
 
 .conversation-delete:hover {
@@ -872,11 +939,50 @@ body {
   }
 
   /* Phone par hover hota hi nahi — actions hamesha dikhne chahiye */
-  .message-actions {
+  .message-actions,
+  .conversation-actions {
     opacity: 1;
   }
 
   .settings-panel {
     max-width: 100%;
   }
+}
+
+/* ─── Crash screen ────────────────────────────────────────────────────── */
+
+.crash {
+  max-width: 520px;
+  margin: 80px auto;
+  padding: 24px;
+  text-align: center;
+}
+
+.crash h2 {
+  margin: 0 0 8px;
+}
+
+.crash p {
+  color: var(--muted);
+}
+
+.crash pre {
+  text-align: left;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  font-size: 12.5px;
+  color: #ffb4b4;
+}
+
+.crash button {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
 }
