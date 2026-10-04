@@ -3,6 +3,8 @@ from app.llm.base import LLMAuthError, LLMUnavailableError
 from app.llm.factory import get_provider
 from app.llm.models import DEFAULT_MODEL
 from app.memory.chat_memory import add_message, drop_last_assistant_message, get_history
+from app.rag.documents import build_context
+from app.rag.embeddings import EmbeddingError
 from typing import Generator
 import logging
 
@@ -27,7 +29,7 @@ def get_ai_response_stream(
         content=message,
         user_id=user_id,
     )
-    yield from _stream_reply(conversation_id, mode, model, api_key)
+    yield from _stream_reply(conversation_id, mode, model, api_key, question=message, user_id=user_id)
 
 
 def regenerate_response_stream(
@@ -49,6 +51,8 @@ def _stream_reply(
     mode: str,
     model: str,
     api_key: str | None,
+    question: str | None = None,
+    user_id: int | None = None,
 ) -> Generator[dict, None, None]:
     """Typed events yield karta hai, raw text nahi.
 
@@ -62,7 +66,7 @@ def _stream_reply(
     try:
         provider = get_provider(model, api_key)
 
-        for chunk in provider.stream(model, get_prompt(mode), history):
+        for chunk in provider.stream(model, _system_prompt(mode, question, user_id), history):
             full_response += chunk
             yield {"type": "token", "text": chunk}
 
@@ -93,3 +97,21 @@ def _stream_reply(
             logger.warning(
                 "No assistant response saved for conversation %s", conversation_id
             )
+
+
+def _system_prompt(mode: str, question: str | None, user_id: int | None) -> str:
+    """Mode ka prompt, aur agar upload kiye documents mein jawab ho toh wo bhi.
+
+    Documents na hon ya embedding model band ho toh chat normal chalti rehti
+    hai — RAG ek bonus hai, zaroorat nahi.
+    """
+    prompt = get_prompt(mode)
+
+    if not question:
+        return prompt
+
+    try:
+        return prompt + build_context(question, user_id)
+    except EmbeddingError:
+        logger.info("Skipping document context — embedding model unavailable")
+        return prompt

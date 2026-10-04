@@ -33,6 +33,8 @@ This is not just a project. It is a learning journey from zero to production-gra
 - Provider abstraction — naya provider add karna ek file ka kaam hai
 - Optional accounts — `AUTH_ENABLED=true` karo toh har user sirf apni chats
   dekhta hai. Default off, taaki local setup bina login ke chalta rahe.
+- **RAG over your documents** — PDF/Markdown/text/code upload karo (📎 button),
+  aur har sawaal ke saath relevant hissa apne aap AI ko chala jaata hai.
 - React chat UI with streaming, conversation history and a stop button
 
 ---
@@ -186,7 +188,13 @@ alembic upgrade head
 ```bash
 ollama serve
 ollama run llama3.2:3b
+
+# Documents upload karne ke liye (RAG) — ek baar ka 274MB download
+ollama pull nomic-embed-text
 ```
+
+> `nomic-embed-text` optional hai. Na ho toh chat normally chalti rahegi,
+> bas document upload kaam nahi karega.
 
 ### 7. Start the server
 

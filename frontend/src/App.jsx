@@ -17,6 +17,7 @@ import {
   truncateFrom,
 } from './api/client'
 import ConversationList from './components/ConversationList'
+import DocumentsPanel from './components/DocumentsPanel'
 import LoginScreen from './components/LoginScreen'
 import MessageInput from './components/MessageInput'
 import MessageList from './components/MessageList'
@@ -62,6 +63,7 @@ export default function App() {
   const [model, setModel] = useState(() => readStored(MODEL_STORAGE))
   const [apiKey, setApiKey] = useState(() => readStored(KEY_STORAGE))
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [documentsOpen, setDocumentsOpen] = useState(false)
   const [search, setSearch] = useState('')
   // null = abhi pata nahi (status aa raha hai), uske baad {enabled, email}
   const [auth, setAuth] = useState(null)
@@ -421,6 +423,15 @@ export default function App() {
 
             <button
               className="settings-button"
+              onClick={() => setDocumentsOpen(true)}
+              title="Documents"
+              aria-label="Documents"
+            >
+              📎
+            </button>
+
+            <button
+              className="settings-button"
               onClick={() => setSettingsOpen(true)}
               title="Settings"
               aria-label="Settings"
@@ -462,6 +473,10 @@ export default function App() {
           hasKey={Boolean(apiKey)}
         />
       </main>
+
+      {documentsOpen && (
+        <DocumentsPanel onClose={() => setDocumentsOpen(false)} />
+      )}
 
       {settingsOpen && (
         <SettingsPanel

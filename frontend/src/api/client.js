@@ -16,6 +16,42 @@ function authHeaders(extra = {}) {
   }
 }
 
+// ─── Documents ────────────────────────────────────────────────────────────
+
+export async function listDocuments() {
+  const response = await fetch(`${API_URL}/api/v1/documents`, {
+    headers: authHeaders(),
+  })
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function uploadDocument(file) {
+  const form = new FormData()
+  form.append('file', file)
+
+  const response = await fetch(`${API_URL}/api/v1/documents`, {
+    method: 'POST',
+    // Content-Type khud mat set karo — browser ko multipart boundary lagane do
+    headers: authHeaders(),
+    body: form,
+  })
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function deleteDocument(id) {
+  const response = await fetch(`${API_URL}/api/v1/documents/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────
 
 export async function authStatus() {

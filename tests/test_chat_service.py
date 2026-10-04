@@ -39,6 +39,8 @@ def saved(monkeypatch):
 
     monkeypatch.setattr(chat_service, "add_message", fake_add_message)
     monkeypatch.setattr(chat_service, "get_history", lambda conversation_id: [])
+    # RAG document lookup alag feature hai — yahan wo DB tak na jaye
+    monkeypatch.setattr(chat_service, "build_context", lambda question, user_id: "")
     return recorded
 
 

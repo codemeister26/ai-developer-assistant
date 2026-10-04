@@ -31,6 +31,31 @@ class Conversation(Base):
     title = Column(String, nullable=True)
     pinned = Column(Boolean, nullable=False, default=False, server_default="false")
 
+class Document(Base):
+    """User ka upload kiya hua file — chat mein context ke liye"""
+    __tablename__ = "documents"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String, nullable=False)
+    # Auth off ho toh None — conversations ki tarah hi
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    chunk_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=func.now(), index=True)
+
+class DocumentChunk(Base):
+    """Document ka ek tukda aur uska embedding.
+
+    Embedding JSON array ki tarah store hota hai. pgvector hota toh behtar
+    hota, par wo extension har Postgres par maujood nahi — is scale par
+    (hazaaron chunks) Python mein similarity theek chal jaati hai.
+    """
+    __tablename__ = "document_chunks"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(
+        Integer, ForeignKey("documents.id"), nullable=False, index=True
+    )
+    content = Column(Text, nullable=False)
+    embedding = Column(Text, nullable=False)
+
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, autoincrement=True)

@@ -57,6 +57,26 @@ HISTORY_CHAR_BUDGET = int(os.getenv("HISTORY_CHAR_BUDGET", "16000"))
 # conversations hone par saari ek saath aa jaati thin.
 CONVERSATION_PAGE_SIZE = int(os.getenv("CONVERSATION_PAGE_SIZE", "50"))
 
+# ─── RAG (uploaded documents) ─────────────────────────────────────────────────
+# Embedding model — keyword ke bajaye matlab se dhoondhne ke liye.
+# Install: ollama pull nomic-embed-text
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+
+# Document kitne-kitne characters ke tukdon mein tootega. Bada chunk = matlab
+# dhundhla, chhota chunk = context adhura.
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1200"))
+# Thoda overlap taaki boundary par baat na kat jaye
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "150"))
+
+# Har sawaal ke saath kitne chunks LLM ko bheje jaate hain
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "4"))
+# Isse kam similarity wale chunks bhejne ka faayda nahi — wo bas context
+# bhar dete hain aur jawab kharab karte hain
+RAG_MIN_SIMILARITY = float(os.getenv("RAG_MIN_SIMILARITY", "0.35"))
+
+# Upload ki max size — bada file embed karne mein bahut time lagta hai
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "10"))
+
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 # Default off — local single-user app par login wall ka koi matlab nahi, aur
 # auth se pehle banayi gayi conversations bhi chalti rehti hain.
