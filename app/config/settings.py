@@ -57,6 +57,14 @@ HISTORY_CHAR_BUDGET = int(os.getenv("HISTORY_CHAR_BUDGET", "16000"))
 # conversations hone par saari ek saath aa jaati thin.
 CONVERSATION_PAGE_SIZE = int(os.getenv("CONVERSATION_PAGE_SIZE", "50"))
 
+# ─── Auth ─────────────────────────────────────────────────────────────────────
+# Default off — local single-user app par login wall ka koi matlab nahi, aur
+# auth se pehle banayi gayi conversations bhi chalti rehti hain.
+# Deploy karte waqt ise true karo.
+AUTH_ENABLED = os.getenv("AUTH_ENABLED", "false").lower() in ("1", "true", "yes")
+
+SESSION_TTL_DAYS = int(os.getenv("SESSION_TTL_DAYS", "30"))
+
 # ─── Rate limiting ────────────────────────────────────────────────────────────
 # Chat endpoint har request par LLM chalata hai. Ye limit ek client ko poora
 # backend jam karne se rokti hai. 0 karne par limit band ho jaati hai.

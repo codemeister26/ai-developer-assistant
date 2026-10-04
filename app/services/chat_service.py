@@ -18,8 +18,15 @@ def get_ai_response_stream(
     mode: str = "general",
     model: str = DEFAULT_MODEL,
     api_key: str | None = None,
-) -> Generator[str, None, None]:
-    add_message(conversation_id=conversation_id, role="user", content=message)
+    user_id: int | None = None,
+) -> Generator[dict, None, None]:
+    # user_id sirf yahan chahiye — nayi conversation isi ke naam par banti hai
+    add_message(
+        conversation_id=conversation_id,
+        role="user",
+        content=message,
+        user_id=user_id,
+    )
     yield from _stream_reply(conversation_id, mode, model, api_key)
 
 

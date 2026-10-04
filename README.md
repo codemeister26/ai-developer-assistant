@@ -31,6 +31,8 @@ This is not just a project. It is a learning journey from zero to production-gra
 - Bring your own key — Claude ke liye apni API key Settings mein daalo. Key
   browser mein rehti hai, server use kabhi save nahi karta.
 - Provider abstraction — naya provider add karna ek file ka kaam hai
+- Optional accounts — `AUTH_ENABLED=true` karo toh har user sirf apni chats
+  dekhta hai. Default off, taaki local setup bina login ke chalta rahe.
 - React chat UI with streaming, conversation history and a stop button
 
 ---

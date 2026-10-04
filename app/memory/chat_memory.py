@@ -49,11 +49,12 @@ def get_history(conversation_id : str) -> list:
             for msg in messages
         ])
 
-def add_message(conversation_id:str, role:str, content:str):
+def add_message(conversation_id:str, role:str, content:str, user_id: int | None = None):
     with get_db() as db:
         conversation = chat_repository.get_conversation(db, conversation_id)
         if not conversation:
-            chat_repository.create_conversation(db, conversation_id)
+            # Nayi conversation uske maalik ke naam par banti hai
+            chat_repository.create_conversation(db, conversation_id, user_id)
 
         chat_repository.add_message(db, conversation_id, role, content)
 
@@ -67,14 +68,15 @@ def drop_last_assistant_message(conversation_id: str) -> bool:
     with get_db() as db:
         return chat_repository.delete_trailing_assistant_message(db, conversation_id)
 
-def get_conversation_messages(conversation_id: str):
+def get_conversation_messages(conversation_id: str, user_id: int | None = None):
     """Conversation ke saare messages (UI ke liye, sirf last N nahi).
 
     None return karta hai agar conversation hi exist nahi karti — taaki caller
     khaali conversation aur missing conversation mein farak kar sake.
     """
     with get_db() as db:
-        if chat_repository.get_conversation(db, conversation_id) is None:
+        # user_id diya ho toh doosre user ki conversation "exist hi nahi karti"
+        if chat_repository.get_conversation(db, conversation_id, user_id) is None:
             return None
 
         messages = chat_repository.get_messages(db, conversation_id, limit=None)
@@ -89,10 +91,15 @@ def get_conversation_messages(conversation_id: str):
             for msg in messages
         ]
 
-def list_conversations(search: str | None = None, limit: int = None, offset: int = 0) -> list:
+def list_conversations(
+    search: str | None = None,
+    limit: int = None,
+    offset: int = 0,
+    user_id: int | None = None,
+) -> list:
     """Conversations ki summary — pinned pehle, phir newest"""
     with get_db() as db:
-        kwargs = {"search": search, "offset": offset}
+        kwargs = {"search": search, "offset": offset, "user_id": user_id}
         if limit is not None:
             kwargs["limit"] = limit
 
@@ -108,15 +115,21 @@ def list_conversations(search: str | None = None, limit: int = None, offset: int
             for c in conversations
         ]
 
-def rename_conversation(conversation_id: str, title: str | None) -> bool:
+def rename_conversation(conversation_id: str, title: str | None, user_id: int | None = None) -> bool:
     with get_db() as db:
+        if chat_repository.get_conversation(db, conversation_id, user_id) is None:
+            return False
         return chat_repository.rename_conversation(db, conversation_id, title)
 
-def set_pinned(conversation_id: str, pinned: bool) -> bool:
+def set_pinned(conversation_id: str, pinned: bool, user_id: int | None = None) -> bool:
     with get_db() as db:
+        if chat_repository.get_conversation(db, conversation_id, user_id) is None:
+            return False
         return chat_repository.set_pinned(db, conversation_id, pinned)
 
-def clear_history(conversation_id: str) -> bool:
+def clear_history(conversation_id: str, user_id: int | None = None) -> bool:
     """Conversation ki poori history permanently delete karo. Returns True agar conversation mili"""
     with get_db() as db:
+        if chat_repository.get_conversation(db, conversation_id, user_id) is None:
+            return False
         return chat_repository.delete_conversation(db, conversation_id)

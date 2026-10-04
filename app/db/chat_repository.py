@@ -3,22 +3,31 @@ from sqlalchemy.orm import Session
 from app.config.settings import CONVERSATION_PAGE_SIZE, HISTORY_MESSAGE_LIMIT
 from app.db.models import Conversation, Message
 
-def create_conversation(db: Session, conversation_id:str):
+def create_conversation(db: Session, conversation_id:str, user_id: int | None = None):
     # to save new convo in data base
-    conversation = Conversation(id = conversation_id)
+    conversation = Conversation(id = conversation_id, user_id = user_id)
     db.add(conversation)
     db.commit()
     return conversation
 
-def get_conversation(db: Session, conversation_id: str):
-    """Check karo ki conversation exist karti hai ya nahi"""
-    return db.query(Conversation).filter(Conversation.id == conversation_id).first()
+def get_conversation(db: Session, conversation_id: str, user_id: int | None = None):
+    """Conversation lao. user_id diya ho toh doosre user ki conversation nahi milegi.
+
+    user_id None matlab single-user mode (auth off) — tab koi filter nahi lagta.
+    """
+    query = db.query(Conversation).filter(Conversation.id == conversation_id)
+
+    if user_id is not None:
+        query = query.filter(Conversation.user_id == user_id)
+
+    return query.first()
 
 def get_all_conversations(
     db: Session,
     search: str | None = None,
     limit: int = CONVERSATION_PAGE_SIZE,
     offset: int = 0,
+    user_id: int | None = None,
 ):
     """Conversations list — pinned pehle, phir newest.
 
@@ -46,6 +55,9 @@ def get_all_conversations(
         Conversation.pinned,
         title,
     )
+
+    if user_id is not None:
+        query = query.filter(Conversation.user_id == user_id)
 
     if search:
         pattern = f"%{search}%"

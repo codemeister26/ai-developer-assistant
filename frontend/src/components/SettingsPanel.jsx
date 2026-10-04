@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
  * API key yahan daali jaati hai. Key sirf is browser mein rehti hai —
  * server use kabhi save nahi karta, har request ke saath bhej dete hain.
  */
-export default function SettingsPanel({ apiKey, onSave, onClose }) {
+export default function SettingsPanel({ apiKey, email, onSignOut, onSave, onClose }) {
   const [draft, setDraft] = useState(apiKey)
 
   useEffect(() => {
@@ -52,6 +52,15 @@ export default function SettingsPanel({ apiKey, onSave, onClose }) {
           </a>
           .
         </p>
+
+        {email && (
+          <div className="settings-account">
+            <span>Signed in as {email}</span>
+            <button type="button" onClick={onSignOut}>
+              Sign out
+            </button>
+          </div>
+        )}
 
         <div className="settings-actions">
           {apiKey && (

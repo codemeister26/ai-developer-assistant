@@ -1,25 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
+  authStatus,
   checkHealth,
   deleteConversation,
   fetchConversation,
   listConversations,
   generateTitle,
   listModels,
+  logout as logoutRequest,
   regenerate,
   renameConversation,
   sendMessage,
   setPinned,
+  setSessionToken,
   truncateFrom,
 } from './api/client'
 import ConversationList from './components/ConversationList'
+import LoginScreen from './components/LoginScreen'
 import MessageInput from './components/MessageInput'
 import MessageList from './components/MessageList'
 import SettingsPanel from './components/SettingsPanel'
 import SidebarToggle from './components/SidebarToggle'
 
 const KEY_STORAGE = 'llm-api-key'
+const SESSION_STORAGE = 'session-token'
 const MODEL_STORAGE = 'llm-model'
 
 // localStorage private browsing mein throw kar sakta hai — app usse na ruke
@@ -58,6 +63,8 @@ export default function App() {
   const [apiKey, setApiKey] = useState(() => readStored(KEY_STORAGE))
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [search, setSearch] = useState('')
+  // null = abhi pata nahi (status aa raha hai), uske baad {enabled, email}
+  const [auth, setAuth] = useState(null)
 
   // Stop button isse stream beech mein cancel karta hai
   const abortRef = useRef(null)
@@ -81,11 +88,26 @@ export default function App() {
     }
   }, [])
 
+  // Auth status aane se pehle koi request mat bhejo, warna sign-in se pehle
+  // har call 401 degi aur error banner bhar jayega
+  const signedIn = auth !== null && (!auth.enabled || Boolean(auth.email))
+
+  // Mount par pata karo ki auth on hai ya nahi, aur saved token valid hai ya nahi
+  useEffect(() => {
+    setSessionToken(readStored(SESSION_STORAGE))
+
+    authStatus()
+      .then(setAuth)
+      .catch(() => setAuth({ enabled: false }))   // backend band — login se mat roko
+  }, [])
+
   // Har keystroke par request na jaaye — type rukne ke baad hi search karo
   useEffect(() => {
+    if (!signedIn) return
+
     const timer = setTimeout(() => loadConversations(search), 250)
     return () => clearTimeout(timer)
-  }, [search, loadConversations])
+  }, [search, loadConversations, signedIn])
 
   async function handleRename(id, title) {
     try {
@@ -108,6 +130,8 @@ export default function App() {
   // Mount pe models aur health uthao. Conversations upar wala search effect
   // laata hai, isliye yahan dobara nahi maangte.
   useEffect(() => {
+    if (!signedIn) return
+
     async function loadInitialData() {
       try {
         const available = await listModels()
@@ -129,7 +153,22 @@ export default function App() {
     }
 
     loadInitialData()
-  }, [loadConversations])
+  }, [loadConversations, signedIn])
+
+  function handleSignedIn(session) {
+    setSessionToken(session.token)
+    writeStored(SESSION_STORAGE, session.token)
+    setAuth({ enabled: true, email: session.email })
+  }
+
+  async function handleSignOut() {
+    await logoutRequest()
+    writeStored(SESSION_STORAGE, '')
+    setAuth({ enabled: true, email: null })
+    setConversations([])
+    setMessages([])
+    setActiveId(null)
+  }
 
   function saveApiKey(key) {
     setApiKey(key)
@@ -334,6 +373,13 @@ export default function App() {
     abortRef.current?.abort()
   }
 
+  // Auth status aane tak kuch mat dikhao — warna ek pal ko galat screen flash hoti hai
+  if (auth === null) return null
+
+  if (auth.enabled && !auth.email) {
+    return <LoginScreen onSignedIn={handleSignedIn} />
+  }
+
   return (
     <div className={`app ${sidebarOpen ? '' : 'sidebar-hidden'}`}>
       <ConversationList
@@ -420,6 +466,8 @@ export default function App() {
       {settingsOpen && (
         <SettingsPanel
           apiKey={apiKey}
+          email={auth.enabled ? auth.email : null}
+          onSignOut={handleSignOut}
           onSave={saveApiKey}
           onClose={() => setSettingsOpen(false)}
         />

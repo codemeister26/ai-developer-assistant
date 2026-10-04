@@ -2,9 +2,28 @@ from sqlalchemy import Boolean, Column, Text, DateTime, String, Integer, Foreign
 from sqlalchemy.sql import func
 from app.db.database import Base
 
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String, unique=True, nullable=False, index=True)
+    # Kabhi plain password store nahi hota — ye pbkdf2 hash hai
+    password_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+class Session(Base):
+    """Opaque session tokens — JWT ke bajaye isliye ki inhe revoke kiya ja sake"""
+    __tablename__ = "sessions"
+    token = Column(String, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=func.now())
+    expires_at = Column(DateTime, nullable=False)
+
 class Conversation(Base):
     __tablename__ = "conversations"
     id = Column(String, primary_key=True)
+    # Nullable isliye — single-user mode (auth off) mein ye khaali rehta hai,
+    # aur auth se pehle banayi gayi conversations bhi chalti rehti hain
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     # index isliye — conversations list hamesha isi par ORDER BY karti hai
     created_at = Column(DateTime, default=func.now(), index=True)
     # User ne rename kiya toh ye bharti hai; khaali ho toh pehle message se

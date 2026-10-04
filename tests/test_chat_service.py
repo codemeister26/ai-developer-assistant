@@ -34,7 +34,7 @@ def saved(monkeypatch):
     """add_message ko intercept karke dekho ki history mein actually kya save hua"""
     recorded = []
 
-    def fake_add_message(conversation_id, role, content):
+    def fake_add_message(conversation_id, role, content, user_id=None):
         recorded.append((role, content))
 
     monkeypatch.setattr(chat_service, "add_message", fake_add_message)

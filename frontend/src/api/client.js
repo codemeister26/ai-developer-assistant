@@ -1,6 +1,59 @@
 // Backend ka address — .env mein VITE_API_URL set karke badal sakte ho
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+// Session token. Module mein isliye rakha hai taaki har call mein pass na
+// karna pade — auth band ho toh ye khaali rehta hai aur header jaata hi nahi.
+let sessionToken = ''
+
+export function setSessionToken(token) {
+  sessionToken = token || ''
+}
+
+function authHeaders(extra = {}) {
+  return {
+    ...extra,
+    ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+  }
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────
+
+export async function authStatus() {
+  const response = await fetch(`${API_URL}/api/v1/auth/status`, {
+    headers: authHeaders(),
+  })
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function signup(email, password) {
+  return postCredentials('signup', email, password)
+}
+
+export async function login(email, password) {
+  return postCredentials('login', email, password)
+}
+
+async function postCredentials(path, email, password) {
+  const response = await fetch(`${API_URL}/api/v1/auth/${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function logout() {
+  await fetch(`${API_URL}/api/v1/auth/logout`, {
+    method: 'POST',
+    headers: authHeaders(),
+  }).catch(() => {})   // token waise bhi client se hata rahe hain
+  setSessionToken('')
+}
+
 /**
  * Backend ke error ko padhne layak message mein badlo.
  * Validation errors FastAPI se {detail: [{msg, loc}]} format mein aate hain.
@@ -71,11 +124,11 @@ export async function sendMessage({
 }) {
   const response = await fetch(`${API_URL}/api/v1/chat`, {
     method: 'POST',
-    headers: {
+    headers: authHeaders({
       'Content-Type': 'application/json',
       // Key header mein jaati hai, body mein nahi — body log ho sakti hai
       ...(apiKey ? { 'X-LLM-Api-Key': apiKey } : {}),
-    },
+    }),
     body: JSON.stringify({
       message,
       conversation_id: conversationId ?? null,
@@ -112,10 +165,10 @@ export async function sendMessage({
 export async function regenerate({ conversationId, mode, model, apiKey, signal, onChunk }) {
   const response = await fetch(`${API_URL}/api/v1/chat/${conversationId}/regenerate`, {
     method: 'POST',
-    headers: {
+    headers: authHeaders({
       'Content-Type': 'application/json',
       ...(apiKey ? { 'X-LLM-Api-Key': apiKey } : {}),
-    },
+    }),
     body: JSON.stringify({ mode: mode ?? 'general', model }),
     signal,
   })
@@ -140,7 +193,7 @@ export async function regenerate({ conversationId, mode, model, apiKey, signal, 
 export async function truncateFrom(conversationId, messageId) {
   const response = await fetch(
     `${API_URL}/api/v1/chat/${conversationId}/messages/${messageId}`,
-    { method: 'DELETE' }
+    { method: 'DELETE', headers: authHeaders() }
   )
 
   if (!response.ok) throw new Error(await readError(response))
@@ -148,7 +201,9 @@ export async function truncateFrom(conversationId, messageId) {
 }
 
 export async function listModels() {
-  const response = await fetch(`${API_URL}/api/v1/models`)
+  const response = await fetch(`${API_URL}/api/v1/models`, {
+    headers: authHeaders(),
+  })
 
   if (!response.ok) throw new Error(await readError(response))
   return response.json()
@@ -156,7 +211,9 @@ export async function listModels() {
 
 export async function listConversations(search = '') {
   const query = search ? `?search=${encodeURIComponent(search)}` : ''
-  const response = await fetch(`${API_URL}/api/v1/conversations${query}`)
+  const response = await fetch(`${API_URL}/api/v1/conversations${query}`, {
+    headers: authHeaders(),
+  })
 
   if (!response.ok) throw new Error(await readError(response))
   return response.json()
@@ -165,7 +222,7 @@ export async function listConversations(search = '') {
 export async function renameConversation(conversationId, title) {
   const response = await fetch(`${API_URL}/api/v1/conversations/${conversationId}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ title }),   // null bhejo toh auto-title wapas
   })
 
@@ -179,10 +236,10 @@ export async function generateTitle(conversationId, model, apiKey) {
     `${API_URL}/api/v1/conversations/${conversationId}/title`,
     {
       method: 'POST',
-      headers: {
+      headers: authHeaders({
         'Content-Type': 'application/json',
         ...(apiKey ? { 'X-LLM-Api-Key': apiKey } : {}),
-      },
+      }),
       body: JSON.stringify({ model }),
     }
   )
@@ -196,7 +253,7 @@ export async function setPinned(conversationId, pinned) {
     `${API_URL}/api/v1/conversations/${conversationId}/pin`,
     {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ pinned }),
     }
   )
@@ -206,7 +263,9 @@ export async function setPinned(conversationId, pinned) {
 }
 
 export async function fetchConversation(conversationId) {
-  const response = await fetch(`${API_URL}/api/v1/chat/${conversationId}`)
+  const response = await fetch(`${API_URL}/api/v1/chat/${conversationId}`, {
+    headers: authHeaders(),
+  })
 
   if (!response.ok) throw new Error(await readError(response))
   return response.json()
@@ -215,6 +274,7 @@ export async function fetchConversation(conversationId) {
 export async function deleteConversation(conversationId) {
   const response = await fetch(`${API_URL}/api/v1/chat/${conversationId}`, {
     method: 'DELETE',
+    headers: authHeaders(),
   })
 
   if (!response.ok) throw new Error(await readError(response))
