@@ -210,16 +210,40 @@ Chat UI khulegi `http://localhost:5173` pe. Details: [frontend/README.md](fronte
 
 ---
 
+## Run with Docker
+
+Postgres, backend aur frontend container mein chalte hain. Ollama host par hi
+rehta hai (container mein GPU access nahi milta aur model dobara download karna
+padta).
+
+```bash
+ollama serve            # host par chalta rahe
+docker compose up --build
+```
+
+Khulega `http://localhost:5173`. Migrations backend container khud chalata hai.
+
+> Dhyan do: ye compose file abhi tak kisi machine par actually build karke nahi
+> chalayi gayi — config likhi hai, verify karna baaki hai.
+
+---
+
 ## Development
 
 ### Run tests
 
 ```bash
 pip install -r requirements-dev.txt
-pytest
+pytest                      # backend
+
+cd frontend && npm test     # frontend
 ```
 
-Tests in-memory SQLite use karte hain — tumhare asli Postgres data ko haath nahi lagta.
+Backend tests in-memory SQLite use karte hain aur bina Postgres ke chalte hain,
+isliye CI mein database ki zarurat nahi padti.
+
+CI (GitHub Actions) har push aur PR par backend tests, frontend tests, lint
+aur build chalata hai — [.github/workflows/ci.yml](.github/workflows/ci.yml)
 
 ### Database migrations
 

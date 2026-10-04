@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from app.api.rate_limit import rate_limit
 from app.api.sse import SSE_HEADERS, to_sse
 from app.config.settings import CONVERSATION_PAGE_SIZE
 from app.llm.models import MODELS
@@ -13,6 +14,7 @@ from app.schemas.chat import (
     RenameRequest,
 )
 from app.services.chat_service import get_ai_response_stream, regenerate_response_stream
+from app.services.title_service import generate_title
 from app.memory.chat_memory import (
     clear_history,
     get_conversation_messages,
@@ -26,7 +28,7 @@ import uuid
 
 router = APIRouter(prefix="/api/v1", tags=["Chat"])
 
-@router.post("/chat")
+@router.post("/chat", dependencies=[Depends(rate_limit)])
 def chat(
     request: ChatRequest,
     # Key header mein aati hai, body mein nahi — body log ya save ho sakti hai.
@@ -46,7 +48,7 @@ def chat(
         headers={**SSE_HEADERS, "X-Conversation-Id": conversation_id}
     )
 
-@router.post("/chat/{conversation_id}/regenerate")
+@router.post("/chat/{conversation_id}/regenerate", dependencies=[Depends(rate_limit)])
 def regenerate(
     conversation_id: str,
     request: RegenerateRequest,
@@ -100,6 +102,28 @@ def rename(conversation_id: str, request: RenameRequest):
     if not rename_conversation(conversation_id, title or None):
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    return _summary_for(conversation_id)
+
+@router.post(
+    "/conversations/{conversation_id}/title",
+    response_model=ConversationSummary,
+    dependencies=[Depends(rate_limit)],
+)
+def auto_title(
+    conversation_id: str,
+    request: RegenerateRequest,
+    x_llm_api_key: str | None = Header(default=None),
+):
+    """Chat ko chhota naam do (LLM se).
+
+    Alag endpoint isliye hai taaki ye extra call streaming ko dheema na kare.
+    Fail ho jaye toh bhi 200 — title na banna koi error nahi, pehla message
+    title ki tarah dikhta rehta hai.
+    """
+    if get_conversation_messages(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    generate_title(conversation_id, request.model, x_llm_api_key)
     return _summary_for(conversation_id)
 
 @router.patch("/conversations/{conversation_id}/pin", response_model=ConversationSummary)

@@ -1,0 +1,52 @@
+# Postgres, backend aur frontend container mein chalte hain.
+#
+# Ollama host par hi chalta hai (container mein daalne se model dobara download
+# karna padta aur GPU access bhi nahi milta) — isliye backend host.docker.internal
+# se usse baat karta hai.
+#
+# Chalane ke liye:  docker compose up --build
+# Khulega:          http://localhost:5173
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ai_assistant
+      POSTGRES_USER: ai_user
+      POSTGRES_PASSWORD: ai_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Backend ki migrations tabhi chalein jab DB sach mein taiyar ho
+      test: ["CMD-SHELL", "pg_isready -U ai_user -d ai_assistant"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://ai_user:ai_password@db:5432/ai_assistant
+      OLLAMA_HOST: http://host.docker.internal:11434
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    extra_hosts:
+      # Linux par ye line host tak pahunchne ke liye zaruri hai
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

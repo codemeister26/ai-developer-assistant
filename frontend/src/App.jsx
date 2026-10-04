@@ -5,6 +5,7 @@ import {
   deleteConversation,
   fetchConversation,
   listConversations,
+  generateTitle,
   listModels,
   regenerate,
   renameConversation,
@@ -229,12 +230,22 @@ export default function App() {
       })
 
       // Nayi chat thi toh ab uska id mil gaya
-      if (!activeId && id) {
-        setActiveId(id)
-        await loadConversations(search)
+      const isNewChat = !activeId && id
+
+      if (isNewChat) setActiveId(id)
+      if (id) await refreshMessages(id)
+
+      if (isNewChat) {
+        // Pehle exchange ke baad chat ko chhota naam dilwao. Fail ho jaye toh
+        // koi baat nahi — pehla message title ki tarah dikhta rahega.
+        try {
+          await generateTitle(id, model, apiKey)
+        } catch {
+          // chup-chaap chhod do
+        }
       }
 
-      if (id) await refreshMessages(id)
+      if (id) await loadConversations(search)
     } catch (err) {
       if (err.name === 'AbortError') {
         // User ne roka — backend jitna jawab bana tha wo save kar leta hai

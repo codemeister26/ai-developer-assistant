@@ -57,6 +57,12 @@ HISTORY_CHAR_BUDGET = int(os.getenv("HISTORY_CHAR_BUDGET", "16000"))
 # conversations hone par saari ek saath aa jaati thin.
 CONVERSATION_PAGE_SIZE = int(os.getenv("CONVERSATION_PAGE_SIZE", "50"))
 
+# ─── Rate limiting ────────────────────────────────────────────────────────────
+# Chat endpoint har request par LLM chalata hai. Ye limit ek client ko poora
+# backend jam karne se rokti hai. 0 karne par limit band ho jaati hai.
+RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "20"))
+RATE_LIMIT_WINDOW = float(os.getenv("RATE_LIMIT_WINDOW", "60"))
+
 # ─── CORS Settings ────────────────────────────────────────────────────────────
 # Kaun se frontend origins is API ko browser se call kar sakte hain.
 # Comma se alag karke likho, e.g. "http://localhost:3000,http://localhost:5173"

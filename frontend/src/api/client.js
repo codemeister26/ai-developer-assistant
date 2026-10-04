@@ -173,6 +173,24 @@ export async function renameConversation(conversationId, title) {
   return response.json()
 }
 
+/** Chat ko chhota naam dilwao (LLM se). Fail ho toh chup-chaap chhod do. */
+export async function generateTitle(conversationId, model, apiKey) {
+  const response = await fetch(
+    `${API_URL}/api/v1/conversations/${conversationId}/title`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { 'X-LLM-Api-Key': apiKey } : {}),
+      },
+      body: JSON.stringify({ model }),
+    }
+  )
+
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
 export async function setPinned(conversationId, pinned) {
   const response = await fetch(
     `${API_URL}/api/v1/conversations/${conversationId}/pin`,
