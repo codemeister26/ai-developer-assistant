@@ -539,6 +539,9 @@ body {
 }
 
 .error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0 20px 10px;
   padding: 10px 14px;
   border-radius: 8px;
@@ -546,6 +549,25 @@ body {
   border: 1px solid #5c2626;
   color: #ffb4b4;
   font-size: 14px;
+}
+
+.error span {
+  flex: 1;
+}
+
+.error button {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border: 1px solid #7a3a3a;
+  border-radius: 6px;
+  background: transparent;
+  color: #ffd0d0;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.error button:hover {
+  background: #4a2020;
 }
 
 /* ─── Composer ────────────────────────────────────────────────────────── */

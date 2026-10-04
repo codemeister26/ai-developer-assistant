@@ -47,20 +47,29 @@ def use_provider(monkeypatch, provider):
     return provider
 
 
-def run_stream(monkeypatch, provider, stop_after=None, **kwargs):
-    """Stream consume karo; stop_after do toh client disconnect simulate hota hai"""
+def collect(monkeypatch, provider, stop_after=None, **kwargs):
+    """Saare events uthao; stop_after do toh client disconnect simulate hota hai"""
     use_provider(monkeypatch, provider)
 
-    output = ""
+    events = []
     generator = get_ai_response_stream("hello", str(uuid.uuid4()), **kwargs)
 
-    for index, chunk in enumerate(generator):
-        output += chunk
+    for index, event in enumerate(generator):
+        events.append(event)
         if stop_after is not None and index + 1 == stop_after:
             generator.close()
             break
 
-    return output
+    return events
+
+
+def text_of(events):
+    """Sirf token events ka text jod do"""
+    return "".join(e["text"] for e in events if e["type"] == "token")
+
+
+def run_stream(monkeypatch, provider, stop_after=None, **kwargs):
+    return text_of(collect(monkeypatch, provider, stop_after, **kwargs))
 
 
 def test_successful_response_is_saved(monkeypatch, saved):
@@ -70,31 +79,61 @@ def test_successful_response_is_saved(monkeypatch, saved):
     assert saved == [("user", "hello"), ("assistant", "Hello world")]
 
 
-def test_llm_failure_is_not_saved_to_history(monkeypatch, saved):
+def test_llm_failure_sends_an_error_event_and_saves_nothing(monkeypatch, saved):
     """Error text history mein chala jaata tha aur agli baar LLM ko wapas milta tha"""
-    provider = FakeProvider(error=LLMUnavailableError("service down"))
+    events = collect(monkeypatch, FakeProvider(error=LLMUnavailableError("down")))
 
-    assert run_stream(monkeypatch, provider) == AI_UNAVAILABLE_MESSAGE
+    assert events[-1] == {
+        "type": "error",
+        "kind": "unavailable",
+        "message": AI_UNAVAILABLE_MESSAGE,
+    }
     assert saved == [("user", "hello")]
 
 
-def test_auth_error_shows_its_own_message(monkeypatch, saved):
+def test_auth_error_has_its_own_kind(monkeypatch, saved):
     """Galat API key user khud theek kar sakta hai — generic error se alag dikhe"""
-    provider = FakeProvider(error=LLMAuthError("bad key"))
+    events = collect(monkeypatch, FakeProvider(error=LLMAuthError("bad key")))
 
-    assert run_stream(monkeypatch, provider) == AI_AUTH_MESSAGE
+    assert events[-1]["kind"] == "auth"
+    assert events[-1]["message"] == AI_AUTH_MESSAGE
     assert saved == [("user", "hello")]
 
 
-def test_partial_response_saved_without_error_text(monkeypatch, saved):
+def test_partial_response_is_saved_and_error_stays_out_of_it(monkeypatch, saved):
     provider = FakeProvider(
         chunks=["partial answer"], error=LLMUnavailableError("died mid-stream")
     )
 
-    output = run_stream(monkeypatch, provider)
+    events = collect(monkeypatch, provider)
 
-    assert output == "partial answer" + AI_UNAVAILABLE_MESSAGE
+    # Error ab apne event mein hai, jawab ke text mein nahi
+    assert text_of(events) == "partial answer"
+    assert events[-1]["type"] == "error"
     assert saved == [("user", "hello"), ("assistant", "partial answer")]
+
+
+def test_successful_stream_ends_with_a_done_event(monkeypatch, saved):
+    events = collect(monkeypatch, FakeProvider(chunks=["Hello", " world"]))
+
+    assert events[-1]["type"] == "done"
+    assert events[-1]["chars"] == len("Hello world")
+
+
+def test_done_event_carries_the_conversation_id(monkeypatch, saved):
+    """Frontend ise header ke bajaye yahan se bhi le sakta hai"""
+    conversation_id = str(uuid.uuid4())
+    use_provider(monkeypatch, FakeProvider(chunks=["ok"]))
+
+    events = list(get_ai_response_stream("hello", conversation_id))
+
+    assert events[-1]["conversation_id"] == conversation_id
+
+
+def test_no_done_event_when_the_stream_fails(monkeypatch, saved):
+    events = collect(monkeypatch, FakeProvider(error=LLMUnavailableError("down")))
+
+    assert not any(e["type"] == "done" for e in events)
 
 
 def test_client_disconnect_keeps_partial_response(monkeypatch, saved):

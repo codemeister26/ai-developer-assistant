@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        # psycopg2 ko build tooling chahiye; CI par binary wheel kaafi hai
+        run: |
+          pip install --upgrade pip
+          pip install psycopg2-binary
+          grep -v '^psycopg2==' requirements.txt > ci-requirements.txt
+          pip install -r ci-requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        # Tests in-memory SQLite use karte hain — Postgres ki zarurat nahi
+        run: pytest -q
+
+      - name: Check migrations match the models
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+        # Sirf offline SQL generate karte hain — isse pata chal jaata hai ki
+        # migration file toot toh nahi gayi, bina database ke
+        run: alembic upgrade head --sql > /dev/null
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build

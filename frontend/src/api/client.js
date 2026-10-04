@@ -19,10 +19,46 @@ async function readError(response) {
 }
 
 /**
+ * SSE stream padho aur har event onEvent ko do.
+ *
+ * Network chunk aur SSE frame ek cheez nahi hain — ek frame do chunks mein
+ * aa sakti hai, isliye buffer rakhna padta hai.
+ */
+async function readEvents(response, onEvent) {
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+
+    // Frames "\n\n" se alag hoti hain; aakhri aadhi frame buffer mein rukti hai
+    const frames = buffer.split('\n\n')
+    buffer = frames.pop() ?? ''
+
+    for (const frame of frames) {
+      const line = frame.trim()
+      if (!line.startsWith('data:')) continue
+
+      try {
+        onEvent(JSON.parse(line.slice(5).trim()))
+      } catch {
+        // Adhuri ya kharab frame — usse poori stream nahi rukni chahiye
+      }
+    }
+  }
+}
+
+/**
  * Message bhejo aur jawab token-by-token receive karo.
  *
- * onChunk har chunk pe call hota hai. Return karta hai conversation id, jo nayi
+ * onChunk har token pe call hota hai. Return karta hai conversation id, jo nayi
  * chat ke case mein backend X-Conversation-Id header se deta hai.
+ * Backend error ko alag event mein bhejta hai, isliye wo throw hota hai —
+ * jawab ke text mein ghusta nahi.
  */
 export async function sendMessage({
   message,
@@ -54,16 +90,19 @@ export async function sendMessage({
   }
 
   // Ye header CORS ke expose_headers mein hai — warna browser ise padhne nahi deta
-  const id = response.headers.get('X-Conversation-Id') || conversationId
+  let id = response.headers.get('X-Conversation-Id') || conversationId
+  let streamError = null
 
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
+  await readEvents(response, (event) => {
+    if (event.type === 'token') onChunk(event.text)
+    else if (event.type === 'done') id = event.conversation_id || id
+    else if (event.type === 'error') streamError = event
+  })
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    onChunk(decoder.decode(value, { stream: true }))
+  if (streamError) {
+    const error = new Error(streamError.message)
+    error.kind = streamError.kind   // "auth" ya "unavailable"
+    throw error
   }
 
   return id
@@ -83,14 +122,17 @@ export async function regenerate({ conversationId, mode, model, apiKey, signal, 
 
   if (!response.ok) throw new Error(await readError(response))
 
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
+  let streamError = null
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
+  await readEvents(response, (event) => {
+    if (event.type === 'token') onChunk(event.text)
+    else if (event.type === 'error') streamError = event
+  })
 
-    onChunk(decoder.decode(value, { stream: true }))
+  if (streamError) {
+    const error = new Error(streamError.message)
+    error.kind = streamError.kind
+    throw error
   }
 }
 

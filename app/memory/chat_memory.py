@@ -89,19 +89,32 @@ def get_conversation_messages(conversation_id: str):
             for msg in messages
         ]
 
-def list_conversations() -> list:
-    """Saari conversations ki summary — newest pehle"""
+def list_conversations(search: str | None = None, limit: int = None, offset: int = 0) -> list:
+    """Conversations ki summary — pinned pehle, phir newest"""
     with get_db() as db:
-        conversations = chat_repository.get_all_conversations(db)
+        kwargs = {"search": search, "offset": offset}
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        conversations = chat_repository.get_all_conversations(db, **kwargs)
 
         return [
             {
                 "conversation_id": c.id,
                 "created_at": c.created_at,
                 "title": c.title,
+                "pinned": c.pinned,
             }
             for c in conversations
         ]
+
+def rename_conversation(conversation_id: str, title: str | None) -> bool:
+    with get_db() as db:
+        return chat_repository.rename_conversation(db, conversation_id, title)
+
+def set_pinned(conversation_id: str, pinned: bool) -> bool:
+    with get_db() as db:
+        return chat_repository.set_pinned(db, conversation_id, pinned)
 
 def clear_history(conversation_id: str) -> bool:
     """Conversation ki poori history permanently delete karo. Returns True agar conversation mili"""

@@ -43,6 +43,8 @@ export default function App() {
   const [messages, setMessages] = useState([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState(null)
+  // "auth" error user khud theek kar sakta hai — uspe Settings ka button dete hain
+  const [errorKind, setErrorKind] = useState(null)
   const [health, setHealth] = useState(null)
   const [draft, setDraft] = useState('')
   // Phone par sidebar poori screen dhak leti hai — wahan band se shuru karo
@@ -56,11 +58,22 @@ export default function App() {
   // Stop button isse stream beech mein cancel karta hai
   const abortRef = useRef(null)
 
+  function showError(err) {
+    const isText = typeof err === 'string'
+    setError(isText ? err : err.message)
+    setErrorKind(isText ? null : err.kind ?? null)
+  }
+
+  function clearError() {
+    setError(null)
+    setErrorKind(null)
+  }
+
   const loadConversations = useCallback(async () => {
     try {
       setConversations(await listConversations())
     } catch (err) {
-      setError(err.message)
+      showError(err)
     }
   }, [])
 
@@ -78,7 +91,7 @@ export default function App() {
           available.some((m) => m.id === current) ? current : available[0]?.id ?? ''
         )
       } catch (err) {
-        setError(err.message)
+        showError(err)
       }
 
       try {
@@ -103,7 +116,7 @@ export default function App() {
 
   async function selectConversation(id) {
     if (isStreaming) return
-    setError(null)
+    clearError()
 
     try {
       const history = await fetchConversation(id)
@@ -114,7 +127,7 @@ export default function App() {
       })))
       setActiveId(id)
     } catch (err) {
-      setError(err.message)
+      showError(err)
     }
   }
 
@@ -123,18 +136,18 @@ export default function App() {
 
     setActiveId(null)
     setMessages([])
-    setError(null)
+    clearError()
   }
 
   async function removeConversation(id) {
-    setError(null)
+    clearError()
 
     try {
       await deleteConversation(id)
       if (id === activeId) startNewChat()
       await loadConversations()
     } catch (err) {
-      setError(err.message)
+      showError(err)
     }
   }
 
@@ -153,7 +166,7 @@ export default function App() {
   }
 
   async function handleSend(text) {
-    setError(null)
+    clearError()
     setIsStreaming(true)
 
     // User ka message aur assistant ka khaali message — usi mein chunks bharte jayenge
@@ -199,9 +212,9 @@ export default function App() {
     } catch (err) {
       if (err.name === 'AbortError') {
         // User ne roka — backend jitna jawab bana tha wo save kar leta hai
-        setError('Response stopped. Whatever was generated has been saved.')
+        showError('Response stopped. Whatever was generated has been saved.')
       } else {
-        setError(err.message)
+        showError(err)
 
         // Kuch aaya hi nahi matlab request reject hui, backend ne kuch save nahi
         // kiya — dono optimistic bubbles hatao warna lagta hai message chala gaya
@@ -220,7 +233,7 @@ export default function App() {
   async function handleRegenerate() {
     if (isStreaming || !activeId) return
 
-    setError(null)
+    clearError()
     setIsStreaming(true)
 
     // Purana jawab hata ke khaali bubble lagao — usi mein naya bharega
@@ -252,9 +265,9 @@ export default function App() {
       await refreshMessages(activeId)
     } catch (err) {
       if (err.name === 'AbortError') {
-        setError('Response stopped. Whatever was generated has been saved.')
+        showError('Response stopped. Whatever was generated has been saved.')
       } else {
-        setError(err.message)
+        showError(err)
       }
     } finally {
       setIsStreaming(false)
@@ -264,7 +277,7 @@ export default function App() {
 
   async function handleEdit(message) {
     if (isStreaming || !activeId) return
-    setError(null)
+    clearError()
 
     try {
       // Purana sawaal aur uske baad ka sab hatao, phir naya sawaal bhejenge
@@ -276,7 +289,7 @@ export default function App() {
       })
       setDraft(message.content)   // purana text input mein, wahan edit karo
     } catch (err) {
-      setError(err.message)
+      showError(err)
     }
   }
 
@@ -337,7 +350,16 @@ export default function App() {
           onEdit={handleEdit}
         />
 
-        {error && <div className="error">{error}</div>}
+        {error && (
+          <div className="error">
+            <span>{error}</span>
+
+            {/* Key wali galti user khud theek kar sakta hai — raasta de do */}
+            {errorKind === 'auth' && (
+              <button onClick={() => setSettingsOpen(true)}>Open Settings</button>
+            )}
+          </div>
+        )}
 
         <MessageInput
           text={draft}

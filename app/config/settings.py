@@ -53,6 +53,10 @@ HISTORY_MESSAGE_LIMIT = int(os.getenv("HISTORY_MESSAGE_LIMIT", "20"))
 # (roughly 4 characters = 1 token, toh 16000 chars ≈ 4000 tokens).
 HISTORY_CHAR_BUDGET = int(os.getenv("HISTORY_CHAR_BUDGET", "16000"))
 
+# Sidebar ek baar mein kitni conversations maangti hai. Bina limit ke 500
+# conversations hone par saari ek saath aa jaati thin.
+CONVERSATION_PAGE_SIZE = int(os.getenv("CONVERSATION_PAGE_SIZE", "50"))
+
 # ─── CORS Settings ────────────────────────────────────────────────────────────
 # Kaun se frontend origins is API ko browser se call kar sakte hain.
 # Comma se alag karke likho, e.g. "http://localhost:3000,http://localhost:5173"

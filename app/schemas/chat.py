@@ -56,7 +56,15 @@ class ChatResponse(BaseModel):
 class ConversationSummary(BaseModel):
     conversation_id: str
     created_at: datetime
-    title: Optional[str] = None   # pehla user message; khaali conversation mein None
+    title: Optional[str] = None   # custom naam, warna pehla user message
+    pinned: bool = False
+
+class RenameRequest(BaseModel):
+    # None bhejoge toh custom naam hat jaata hai aur auto-title wapas aa jaata hai
+    title: Optional[str] = Field(default=None, max_length=200)
+
+class PinRequest(BaseModel):
+    pinned: bool
 
 class MessageOut(BaseModel):
     id: int          # edit-and-resend ko yahan se truncate karna hota hai

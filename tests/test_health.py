@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 from fastapi.testclient import TestClient
 
 from app.api import health
@@ -6,7 +8,22 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_health_reports_ok_when_database_reachable():
+class FakeSession:
+    """SELECT 1 chal gaya — asli Postgres ki zarurat nahi"""
+
+    def execute(self, statement):
+        return None
+
+
+@contextmanager
+def working_db():
+    yield FakeSession()
+
+
+def test_health_reports_ok_when_database_reachable(monkeypatch):
+    # Pehle ye test asli Postgres maangta tha, isliye DB band hone par fail hota
+    # tha aur CI mein chal hi nahi sakta tha
+    monkeypatch.setattr(health, "get_db", working_db)
     response = client.get("/health")
 
     assert response.status_code == 200

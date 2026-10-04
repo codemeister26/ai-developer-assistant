@@ -42,30 +42,36 @@ def _stream_reply(
     mode: str,
     model: str,
     api_key: str | None,
-) -> Generator[str, None, None]:
+) -> Generator[dict, None, None]:
+    """Typed events yield karta hai, raw text nahi.
+
+    Isse error ab jawab ke beech mein text ki tarah nahi jaata — frontend use
+    alag se dikha sakta hai, aur baad mein token count jaisi cheezein bhejna
+    bhi aasaan rahega.
+    """
     history = get_history(conversation_id)
     full_response = ""
-
-    # Kuch stream hua ya nahi — error hone par isse pata chalta hai ki backend ne
-    # kuch save kiya ya request pehle hi reject ho gayi
-    received_anything = False
 
     try:
         provider = get_provider(model, api_key)
 
         for chunk in provider.stream(model, get_prompt(mode), history):
-            received_anything = True
             full_response += chunk
-            yield chunk
+            yield {"type": "token", "text": chunk}
 
     except LLMAuthError:
-        # Ye user khud theek kar sakta hai — isliye alag message
-        yield AI_AUTH_MESSAGE
+        # Ye user khud theek kar sakta hai — isliye alag kind
+        yield {"type": "error", "kind": "auth", "message": AI_AUTH_MESSAGE}
 
     except LLMUnavailableError:
-        # Sirf user ko batao — save kuch nahi karte, warna agli baar ye error
-        # LLM ko context ki tarah wapas chala jaayega
-        yield AI_UNAVAILABLE_MESSAGE
+        yield {"type": "error", "kind": "unavailable", "message": AI_UNAVAILABLE_MESSAGE}
+
+    else:
+        yield {
+            "type": "done",
+            "conversation_id": conversation_id,
+            "chars": len(full_response),
+        }
 
     finally:
         # finally isliye — client beech mein disconnect ho jaaye tab bhi jitna
@@ -76,7 +82,7 @@ def _stream_reply(
                 role="assistant",
                 content=full_response
             )
-        elif not received_anything:
+        else:
             logger.warning(
                 "No assistant response saved for conversation %s", conversation_id
             )

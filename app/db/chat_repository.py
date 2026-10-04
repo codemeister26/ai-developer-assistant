@@ -1,6 +1,6 @@
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
-from app.config.settings import HISTORY_MESSAGE_LIMIT
+from app.config.settings import CONVERSATION_PAGE_SIZE, HISTORY_MESSAGE_LIMIT
 from app.db.models import Conversation, Message
 
 def create_conversation(db: Session, conversation_id:str):
@@ -14,12 +14,19 @@ def get_conversation(db: Session, conversation_id: str):
     """Check karo ki conversation exist karti hai ya nahi"""
     return db.query(Conversation).filter(Conversation.id == conversation_id).first()
 
-def get_all_conversations(db:Session):
-    """Saari conversations (id, created_at, title) — newest pehle.
+def get_all_conversations(
+    db: Session,
+    search: str | None = None,
+    limit: int = CONVERSATION_PAGE_SIZE,
+    offset: int = 0,
+):
+    """Conversations list — pinned pehle, phir newest.
 
-    Title har conversation ka pehla user message hai, taaki sidebar mein naam
-    dikhe id ke bajaye. Subquery se aata hai — har conversation ke liye alag
-    query nahi chalti, aur ye conversation_id wale index ko use karti hai.
+    Title user ka diya hua naam hai; na ho toh pehla user message. Subquery se
+    aata hai, isliye har conversation ke liye alag query nahi chalti, aur ye
+    conversation_id wale index ko use karti hai.
+
+    search diya ho toh title aur message content dono mein dhoondha jaata hai.
     """
     first_user_message = (
         select(Message.content)
@@ -30,15 +37,62 @@ def get_all_conversations(db:Session):
         .scalar_subquery()
     )
 
-    return (
-        db.query(
-            Conversation.id,
-            Conversation.created_at,
-            first_user_message.label("title"),
+    # User ka rename kiya hua naam jeetta hai, warna pehla message
+    title = func.coalesce(Conversation.title, first_user_message).label("title")
+
+    query = db.query(
+        Conversation.id,
+        Conversation.created_at,
+        Conversation.pinned,
+        title,
+    )
+
+    if search:
+        pattern = f"%{search}%"
+        # Kisi bhi message mein match mile toh wo conversation bhi chahiye —
+        # sirf title match kaafi nahi hoga
+        matching_message = (
+            select(Message.id)
+            .where(
+                Message.conversation_id == Conversation.id,
+                Message.content.ilike(pattern),
+            )
+            .limit(1)
+            .correlate(Conversation)
+            .exists()
         )
-        .order_by(Conversation.created_at.desc())
+        query = query.filter(
+            or_(Conversation.title.ilike(pattern), matching_message)
+        )
+
+    return (
+        query
+        .order_by(Conversation.pinned.desc(), Conversation.created_at.desc())
+        .limit(limit)
+        .offset(offset)
         .all()
     )
+
+def rename_conversation(db: Session, conversation_id: str, title: str | None) -> bool:
+    """Custom naam set karo. title None ho toh auto-title par wapas chala jaata hai."""
+    conversation = get_conversation(db, conversation_id)
+
+    if conversation is None:
+        return False
+
+    conversation.title = title
+    db.commit()
+    return True
+
+def set_pinned(db: Session, conversation_id: str, pinned: bool) -> bool:
+    conversation = get_conversation(db, conversation_id)
+
+    if conversation is None:
+        return False
+
+    conversation.pinned = pinned
+    db.commit()
+    return True
 
 def add_message(db:Session, conversation_id:str, role:str, content:str):
      """Ek message conversation mein save karo"""

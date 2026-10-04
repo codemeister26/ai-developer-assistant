@@ -1,18 +1,24 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from app.api.sse import SSE_HEADERS, to_sse
+from app.config.settings import CONVERSATION_PAGE_SIZE
 from app.llm.models import MODELS
 from app.schemas.chat import (
     ChatRequest,
     ConversationSummary,
     MessageOut,
     ModelOut,
+    PinRequest,
     RegenerateRequest,
+    RenameRequest,
 )
 from app.services.chat_service import get_ai_response_stream, regenerate_response_stream
 from app.memory.chat_memory import (
     clear_history,
     get_conversation_messages,
     list_conversations,
+    rename_conversation,
+    set_pinned,
     truncate_from,
 )
 from typing import List
@@ -30,14 +36,14 @@ def chat(
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
     return StreamingResponse(
-        get_ai_response_stream(
+        to_sse(get_ai_response_stream(
            message=request.message,
            conversation_id=conversation_id,
            mode=request.mode.value,
            model=request.model,
-           api_key=x_llm_api_key),
-        media_type="text/plain",
-        headers={"X-Conversation-Id": conversation_id}
+           api_key=x_llm_api_key)),
+        media_type="text/event-stream",
+        headers={**SSE_HEADERS, "X-Conversation-Id": conversation_id}
     )
 
 @router.post("/chat/{conversation_id}/regenerate")
@@ -51,13 +57,13 @@ def regenerate(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     return StreamingResponse(
-        regenerate_response_stream(
+        to_sse(regenerate_response_stream(
             conversation_id=conversation_id,
             mode=request.mode.value,
             model=request.model,
-            api_key=x_llm_api_key),
-        media_type="text/plain",
-        headers={"X-Conversation-Id": conversation_id}
+            api_key=x_llm_api_key)),
+        media_type="text/event-stream",
+        headers={**SSE_HEADERS, "X-Conversation-Id": conversation_id}
     )
 
 @router.delete("/chat/{conversation_id}/messages/{message_id}")
@@ -75,9 +81,41 @@ def get_models():
     return MODELS
 
 @router.get("/conversations", response_model=List[ConversationSummary])
-def get_conversations():
-    """Saari conversations list karo — newest pehle"""
-    return list_conversations()
+def get_conversations(
+    search: str | None = Query(default=None, max_length=200),
+    limit: int = Query(default=CONVERSATION_PAGE_SIZE, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+):
+    """Conversations list karo — pinned pehle, phir newest.
+
+    search title aur message content dono mein dhoondhta hai.
+    """
+    return list_conversations(search=search, limit=limit, offset=offset)
+
+@router.patch("/conversations/{conversation_id}", response_model=ConversationSummary)
+def rename(conversation_id: str, request: RenameRequest):
+    """Conversation ka naam badlo. title null bhejo toh auto-title wapas aa jaata hai."""
+    title = request.title.strip() if request.title else None
+
+    if not rename_conversation(conversation_id, title or None):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    return _summary_for(conversation_id)
+
+@router.patch("/conversations/{conversation_id}/pin", response_model=ConversationSummary)
+def pin(conversation_id: str, request: PinRequest):
+    if not set_pinned(conversation_id, request.pinned):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    return _summary_for(conversation_id)
+
+def _summary_for(conversation_id: str):
+    """Update ke baad wapas bheji jaane wali summary"""
+    for summary in list_conversations():
+        if summary["conversation_id"] == conversation_id:
+            return summary
+
+    raise HTTPException(status_code=404, detail="Conversation not found")
 
 @router.get("/chat/{conversation_id}", response_model=List[MessageOut])
 def get_chat(conversation_id: str):
