@@ -1,0 +1,412 @@
+===============================================================================
+AI DEVELOPER ASSISTANT — PROJECT NOTES
+===============================================================================
+
+Last updated : 5 October 2026
+Repo         : https://github.com/codemeister26/ai-developer-assistant
+Local path   : ~/Desktop/aiproject/backend
+
+Ye document teen sawaalon ka jawab deta hai:
+  1. Ab tak kya banaya
+  2. Kaise banaya — aur har bade faisle ke peeche ki wajah
+  3. Aage kya karna hai
+
+Sabse zaruri hissa part 2 hai. Code padh kar ye pata chal jaata hai ki "kya"
+kiya, par "kyun" kiya — wo sirf yahan likha hai.
+
+
+===============================================================================
+1. YE PROJECT HAI KYA
+===============================================================================
+
+Ek ChatGPT jaisa chat assistant, jo poora khud se banaya gaya hai — koi
+LangChain, koi ready-made framework nahi.
+
+  - Local AI (Ollama) par free chalta hai
+  - Chaho toh Claude API par switch kar do, apni key daal kar
+  - Apne documents (PDF/notes/code) upload karke unhi ke baare mein poochho
+
+Stack:
+  Backend   : Python, FastAPI, PostgreSQL, SQLAlchemy, Alembic
+  Frontend  : React, Vite
+  AI        : Ollama (local) + Anthropic Claude (optional)
+  Tests     : pytest (backend), vitest (frontend)
+  CI        : GitHub Actions
+
+
+===============================================================================
+2. AB TAK KYA BANAYA
+===============================================================================
+
+--- Chat ka core ----------------------------------------------------------
+
+  * Streaming jawab — token by token, ChatGPT jaisa
+  * Multi-conversation — har chat alag, PostgreSQL mein save
+  * Stop button — beech mein rok sakte ho, jitna jawab bana tha wo bach jaata hai
+  * 6 answer modes — General, Code review, Debug, Explain, Architecture,
+    Write code. Har mode ka apna system prompt hai.
+
+--- Models ----------------------------------------------------------------
+
+  * Model dropdown: Llama 3.2 3B (local, free) / Claude Haiku / Sonnet / Opus
+  * BYOK — Claude ke liye apni API key Settings mein daalo
+  * Beech chat mein model badal sakte ho
+
+--- Messages --------------------------------------------------------------
+
+  * Copy — kisi bhi message par
+  * Edit & resend — apna sawaal badal kar dobara bhejo
+  * Regenerate — wahi sawaal, naya jawab
+  * Markdown rendering — code blocks syntax highlighting aur copy button ke saath
+
+--- Sidebar ---------------------------------------------------------------
+
+  * Auto titles — LLM chat ko 3-6 shabdon ka naam deta hai
+  * Search — title aur message content dono mein
+  * Rename aur Pin
+  * Delete confirmation (naam dikhane ke saath)
+  * Collapsible, smooth animation ke saath
+
+--- Documents (RAG) -------------------------------------------------------
+
+  * PDF / Markdown / text / code upload (📎 button)
+  * Har sawaal par relevant hissa apne aap AI ko bheja jaata hai
+  * Semantic search — "Friday pe deploy kar sakta hoon?" poochne par
+    "deployment windows" wala section mil jaata hai, chahe wo shabd sawaal
+    mein na ho
+
+--- Production cheezein ---------------------------------------------------
+
+  * Optional accounts (AUTH_ENABLED) — per-user conversation isolation
+  * Rate limiting — 20 requests / 60 second per client
+  * Alembic migrations
+  * Health check (database status ke saath)
+  * Rate-limited, timeout-protected LLM calls
+  * Docker compose setup
+  * CI — har push par tests + lint + build
+  * Mobile layout
+  * Error boundary — crash par blank page nahi
+
+--- Numbers ---------------------------------------------------------------
+
+  Commits         : 40
+  Backend code    : ~2,100 lines
+  Test code       : ~1,300 lines
+  Frontend code   : ~3,000 lines
+  Backend tests   : 159 (19 files)
+  Frontend tests  : 11
+  API endpoints   : 18
+  Migrations      : 4
+
+
+===============================================================================
+3. KAISE BANAYA — AUR KYUN
+===============================================================================
+
+Ye wo faisle hain jo code padh kar samajh nahi aayenge. Inhe yaad rakhna
+zaroori hai.
+
+--- 3.1 Error kabhi chat history mein save nahi hota ----------------------
+
+PROBLEM: Ollama fail hone par code "AI service is currently unavailable."
+         yield karta tha. Wo text assistant ke jawab ki tarah DB mein save
+         ho jaata tha, aur AGLI BAAR LLM ko context mein wapas bheja jaata
+         tha. Ek failure poori conversation kharab kar deta tha.
+
+FIX    : LLM layer ab typed error raise karti hai (LLMUnavailableError /
+         LLMAuthError), text yield nahi karti. "User ko kya dikhana hai" aur
+         "kya save karna hai" — dono faisle service layer ke paas hain.
+
+--- 3.2 Disconnect par adhoora jawab bachta hai ---------------------------
+
+PROBLEM: User tab band kar de toh generator complete nahi hota, aur
+         add_message kabhi chalta hi nahi tha. Sawaal save, jawab gayab.
+
+FIX    : Assistant reply ab finally block mein save hoti hai.
+
+--- 3.3 Database index (measured) -----------------------------------------
+
+PROBLEM: Har chat request history fetch karti hai jo messages.conversation_id
+         par filter karti hai. Postgres foreign key par apne aap index nahi
+         banata.
+
+MEASURE: 40,000 rows par test kiya —
+           index ke saath : 0.024 ms (bitmap index scan)
+           index ke bina  : 0.803 ms (19,492 rows filter karke phenki)
+
+--- 3.4 Alembic, create_all nahi ------------------------------------------
+
+PROBLEM: create_all() sirf nayi tables banata hai. Maujooda table mein column
+         ya index add karna ho toh wo kuch nahi karta — chupchap.
+
+FIX    : Alembic. main.py se create_all hata diya. Side benefit: app ab bina
+         database ke bhi import ho jaati hai.
+
+--- 3.5 SSE streaming (sabse important architectural change) ---------------
+
+PROBLEM: Stream "text/plain" thi. Matlab text ke alawa kuch bhej hi nahi
+         sakte the — error bhi jawab ke beech text ban kar aata tha aur
+         assistant ke bubble mein dikh jaata tha.
+
+FIX    : text/event-stream + typed JSON events (token / error / done).
+         Ab error apne event mein hai — UI use banner mein dikhata hai aur
+         auth error par "Open Settings" ka button deta hai. Fake assistant
+         bubble nahi banta.
+
+         JSON frame isliye: code blocks mein newlines hoti hain, jo plain
+         text SSE ko tod deti hain.
+
+         Ye change aage ke har feature ka darwaza hai — token count, cost
+         display, tool calls, sab iske upar banenge.
+
+--- 3.6 Provider abstraction + BYOK ---------------------------------------
+
+DESIGN : LLMProvider interface, uske peeche OllamaProvider aur
+         AnthropicProvider. Naya provider add karna ab ek file ka kaam hai.
+
+KEY    : API key header mein jaati hai (X-LLM-Api-Key), request BODY mein
+         nahi — body log ya save ho sakti hai. Server use kabhi store nahi
+         karta. Ek test ye bhi check karta hai ki key logs mein na jaye.
+
+--- 3.7 qwen3 kyun nahi (measured) ----------------------------------------
+
+Behtar jawab ke liye qwen3:4b try kiya tha. Do problem mili:
+
+  1. Wo reasoning model hai — apni soch "thinking" field mein bhejta hai aur
+     "content" khaali rakhta hai. Hamara code sirf content stream karta hai,
+     toh 300 second tak blank screen. Fix: har request ab think=False bhejti
+     hai (kisi bhi reasoning model ke liye safeguard).
+
+  2. Thinking off karne ke baad bhi wo content mein hi bak-bak karta hai.
+     "Say hi in 3 words" par 2,616 tokens aur 229 second liye.
+     llama3.2:3b ne wahi kaam 4 tokens aur 3 second mein kiya.
+
+NATEEJA: Default llama3.2:3b hi hai. settings.py mein ye reason likha hai
+         taaki koi dobara qwen3 na lagaye.
+
+--- 3.8 Code accuracy rules (measured) ------------------------------------
+
+PROBLEM: Chhote models confidently galat code likhte hain. Ek async wale
+         jawab mein teen galtiyan thi — "await requests.get()" (requests
+         synchronous library hai, await kar hi nahi sakte), non-async def
+         ke andar await, aur "concurrent" example jo actually sequential tha.
+
+FIX    : Har prompt ke saath CODE_ACCURACY_RULES jaate hain — library ka
+         sync/async check karo, invented API mat likho, "await sirf async def
+         mein".
+
+MEASURE: Wahi sawaal dobara poocha —
+           pehle : 3 galtiyan
+           ab    : 0 — jawab asyncio.sleep, asyncio.run, create_task sahi se
+                   use karta hai
+
+--- 3.9 History trimming — count nahi, character budget --------------------
+
+PROBLEM: Limit "last 10 messages" thi. 10 chhote aur 10 bade messages ek
+         jaise treat hote the — ek bada message context window bhar sakta tha.
+
+FIX    : 16,000 character ka budget (roughly 4,000 tokens). Messages poore
+         rakhe jaate hain, beech se kaate nahi jaate.
+
+CATCH  : Trim ke baad agar "assistant" sabse aage aa jaye toh ANTHROPIC 400
+         DETA HAI — wo pehla message "user" hi maangta hai. Uske liye alag
+         handling aur test hai.
+
+--- 3.10 Auth optional, default OFF ----------------------------------------
+
+WAJAH  : Local single-user app par login wall bekaar hai. Aur auth se pehle
+         banayi gayi 25 conversations (jinka user_id NULL hai) gayab ho
+         jatin.
+
+DESIGN : user_id None = single-user mode, koi filter nahi lagta.
+         user_id set = sirf apni chats.
+         Deploy karte waqt .env mein AUTH_ENABLED=true.
+
+SECURITY:
+  - Passwords pbkdf2-sha256, 600k iterations, per-password salt.
+    stdlib isliye ki bcrypt/argon2 ko C dependency chahiye hoti.
+  - Sessions opaque tokens hain jo DB mein rehte hain — JWT ke bajaye isliye
+    ki inhe revoke kiya ja sake.
+  - Login fail par "email galat hai ya password" — dono par ek hi message,
+    warna pata chal jaata hai ki kaun se emails registered hain.
+  - Doosre user ki chat par 404 milta hai, 403 nahi — uska HONA bhi nahi
+    batana chahiye.
+
+--- 3.11 RAG: embeddings, keyword search nahi ------------------------------
+
+WAJAH  : User apne shabdon mein poochta hai, document ke shabd alag hote
+         hain. Test: "Can I ship to prod on a Friday?" poocha — document
+         mein "deployment windows" likha tha, "ship" ya "Friday" nahi.
+         Keyword search kuch nahi deti; embeddings ne sahi section dhoondh
+         liya.
+
+MODEL  : nomic-embed-text — 274MB, local, free, ek baar ka download.
+
+STORAGE: Embeddings JSON ki tarah Postgres mein, similarity Python mein.
+         pgvector behtar hota par wo extension har Postgres par nahi hota.
+         Personal document collection ke scale par ye theek chalta hai.
+
+QUALITY: similarity < 0.35 wale chunks nahi bheje jaate — wo bas context
+         bhar dete hain aur jawab kharab karte hain.
+         Prompt model ko kehta hai ki document mein jawab na ho toh saaf
+         bata de. Test kiya: holiday policy poocha (jo document mein thi
+         nahi) toh usne mana kiya, banaya nahi.
+
+--- 3.12 Chhote par kaam ke faisle -----------------------------------------
+
+  * Title generation ALAG endpoint hai, streaming ke andar nahi — warna wo
+    extra LLM call jawab ko dheema kar deti.
+
+  * get_db() context manager — pehle 4 jagah manually session khulta tha aur
+    rollback kahin nahi tha. Fail hui transaction session mein padi reh jaati
+    hai aur agli query ko bhi le dubti hai.
+
+  * health.py mein ek leak tha — query fail hone par db.close() kabhi chalta
+    hi nahi tha, kyunki close try block ke andar tha.
+
+  * Ollama read timeout do tokens ke BEECH ka gap hai, poore jawab ka nahi —
+    isliye lambe jawab par asar nahi padta, par Ollama chup ho jaye toh
+    request hamesha ke liye nahi latakti.
+
+  * Sidebar mobile par band se shuru hoti hai — warna pehli screen poori
+    dhak leti thi aur toggle uske peeche chala jaata tha, yaani band hi nahi
+    kar sakte the.
+
+  * Textarea 16px hai — 16px se kam par iOS focus karte hi zoom kar deta hai.
+
+
+===============================================================================
+4. PROJECT STRUCTURE
+===============================================================================
+
+backend/
+├── app/
+│   ├── api/          chat, auth, documents, health, sse, rate_limit
+│   ├── auth/         password hashing, session service
+│   ├── config/       settings, prompts, logging
+│   ├── db/           models, repository, session management
+│   ├── llm/          provider interface + Ollama/Anthropic + model catalog
+│   ├── memory/       conversation history, trimming
+│   ├── rag/          chunking, embeddings, extraction, retrieval
+│   ├── schemas/      request/response models
+│   └── services/     chat orchestration, title generation
+├── alembic/          database migrations
+├── tests/            159 tests
+├── frontend/         React app
+└── .github/          CI workflow
+
+Har layer ka ek kaam hai. Ek layer badlo, baaki nahi tootti.
+
+
+===============================================================================
+5. KAISE CHALAYE
+===============================================================================
+
+Pehli baar:
+  brew services start postgresql@16
+  cd ~/Desktop/aiproject/backend
+  python3 -m venv venv && source venv/bin/activate
+  pip install -r requirements.txt
+  alembic upgrade head
+  ollama pull llama3.2:3b
+  ollama pull nomic-embed-text        # documents ke liye, optional
+  cd frontend && npm install
+
+Roz chalane ke liye (do terminal):
+  Terminal 1:  source venv/bin/activate && python3 -m uvicorn app.main:app --reload
+  Terminal 2:  cd frontend && npm run dev
+
+  Kholo: http://localhost:5173
+  API docs: http://localhost:8000/docs
+
+Tests:
+  pytest                    # backend
+  cd frontend && npm test   # frontend
+
+Band karne ke liye:
+  pkill -f "uvicorn app.main:app"; pkill -f vite
+
+AGAR POSTGRES NA CHALE:
+  Reboot ke baad kabhi-kabhi purani lock file reh jaati hai. Pehle check
+  karo ki koi postgres sach mein chal raha hai ya nahi:
+    pgrep -fl postgres
+  Kuch na mile toh:
+    rm /opt/homebrew/var/postgresql@16/postmaster.pid
+    brew services restart postgresql@16
+
+
+===============================================================================
+6. AAGE KA PLAN
+===============================================================================
+
+--- Turant karne layak ----------------------------------------------------
+
+  [ ] DOCKER VERIFY KARO
+      Compose file likhi hui hai par kabhi actually build karke chalayi nahi
+      gayi — is machine par Docker installed nahi tha. Docker install karke
+      "docker compose up --build" chala kar confirm karna hai.
+
+  [ ] BEHTAR CODING MODEL
+      ollama pull qwen2.5-coder:7b
+      4.7GB, free, coding ke liye llama3.2:3b se kaafi behtar. Reasoning
+      model NAHI hai, isliye qwen3 wali bak-bak ki problem nahi aayegi.
+      Jawab shayad ~1 minute lenge. Try karke dekho ki speed acceptable hai
+      ya nahi.
+
+--- SSE ke upar banne wale features ---------------------------------------
+
+Ab jab stream typed events bhejti hai, ye sab possible ho gaya hai:
+
+  [ ] Token count aur cost display — "done" event mein tokens bhejo, UI par
+      dikhao. Paid models par ye bahut kaam ka hai.
+  [ ] "Searching your documents..." jaisa status event, jab RAG chal raha ho
+  [ ] Tool use / function calling — web search, code execution
+
+--- Scale par zarurat padegi ----------------------------------------------
+
+  [ ] pgvector — abhi saare chunks memory mein load hokar Python mein compare
+      hote hain. Hazaaron documents hone par ye dheema padega.
+  [ ] Rate limiting Redis mein — abhi in-memory hai, yaani ek process ke liye.
+      Multi-instance deploy karoge toh Redis chahiye.
+  [ ] Conversations ki infinite scroll — abhi 50 ka page hai par UI "load
+      more" nahi dikhata.
+
+--- Product features ------------------------------------------------------
+
+  [ ] Conversation export (Markdown / JSON)
+  [ ] Message-level feedback (thumbs up/down) — baad mein prompt tuning ke
+      kaam aayega
+  [ ] Conversation branching — ek jagah se do alag raaste
+  [ ] Image upload (vision models ke saath)
+  [ ] Keyboard shortcuts
+
+--- Deploy karne se pehle -------------------------------------------------
+
+  [ ] AUTH_ENABLED=true karo
+  [ ] Database password badlo (abhi .env.example wala default hai)
+  [ ] CORS_ORIGINS mein asli domain daalo
+  [ ] Observability — request metrics, error tracking (Sentry jaisa)
+  [ ] Database backup ka plan
+
+
+===============================================================================
+7. YAAD RAKHNE LAYAK BAATEIN
+===============================================================================
+
+  * Auth OFF hai by default. Ye jaan-boojh kar hai — on karoge toh purani
+    conversations (user_id NULL) kisi ko nahi dikhengi.
+
+  * Jawab ki quality model par depend karti hai, prompt par nahi. Prompt se
+    jitna sudhar ho sakta tha (code accuracy rules) wo ho chuka hai. Isse
+    aage jaana ho toh bada model chahiye.
+
+  * .env git mein nahi jaati (gitignore mein hai). .env.example dekh kar
+    apni .env banao.
+
+  * API key browser mein rehti hai, server par nahi. Browser ka data saaf
+    karoge toh dobara daalni padegi — ye by design hai.
+
+  * Tests bina Postgres ke chalte hain (in-memory SQLite). Isiliye CI mein
+    database ki zarurat nahi padti.
+
+===============================================================================
