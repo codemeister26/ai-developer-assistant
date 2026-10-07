@@ -101,3 +101,41 @@ def test_bad_bytes_do_not_fail_the_whole_upload():
 )
 def test_extension_detection(filename, expected):
     assert extension_of(filename) == expected
+
+
+# ─── Sources ──────────────────────────────────────────────────────────────────
+
+def test_build_context_reports_which_files_it_used(monkeypatch):
+    from app.rag import documents
+
+    monkeypatch.setattr(documents, "search", lambda q, u=None: [
+        {"content": "a", "filename": "manual.pdf", "score": 0.9},
+        {"content": "b", "filename": "notes.md", "score": 0.8},
+    ])
+
+    context, sources = documents.build_context("q")
+
+    assert sources == ["manual.pdf", "notes.md"]
+    assert "manual.pdf" in context
+
+
+def test_same_file_is_named_only_once(monkeypatch):
+    """Ek hi PDF ke kai chunks mil sakte hain — naam ek hi baar dikhe"""
+    from app.rag import documents
+
+    monkeypatch.setattr(documents, "search", lambda q, u=None: [
+        {"content": "a", "filename": "manual.pdf", "score": 0.9},
+        {"content": "b", "filename": "manual.pdf", "score": 0.8},
+    ])
+
+    _, sources = documents.build_context("q")
+
+    assert sources == ["manual.pdf"]
+
+
+def test_no_matches_means_no_context_and_no_sources(monkeypatch):
+    from app.rag import documents
+
+    monkeypatch.setattr(documents, "search", lambda q, u=None: [])
+
+    assert documents.build_context("q") == ("", [])

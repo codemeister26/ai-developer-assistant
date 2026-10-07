@@ -121,23 +121,30 @@ def search(question: str, user_id: int | None = None) -> list[dict]:
     return relevant[:RAG_TOP_K]
 
 
-def build_context(question: str, user_id: int | None = None) -> str:
-    """Mile hue chunks ko system prompt mein jodne layak text banao"""
+def build_context(question: str, user_id: int | None = None) -> tuple[str, list[str]]:
+    """Prompt mein jodne layak text, aur kaun si files use hui unke naam.
+
+    Filenames isliye lautate hain taaki UI user ko dikha sake ki jawab kahan
+    se aaya — warna pata hi nahi chalta ki documents use hue ya nahi.
+    """
     matches = search(question, user_id)
 
     if not matches:
-        return ""
+        return "", []
 
     sections = "\n\n".join(
         f"[{m['filename']}]\n{m['content']}" for m in matches
     )
+
+    # Ek hi file ke kai chunks ho sakte hain — naam ek hi baar, order barkarar
+    sources = list(dict.fromkeys(m["filename"] for m in matches))
 
     return (
         "\n\nThe user has uploaded documents. Relevant excerpts are below.\n"
         "Use them when they help, and say so when they do not contain the "
         "answer — do not invent details that are not there.\n\n"
         f"{sections}\n"
-    )
+    ), sources
 
 
 def _summary(document: Document) -> dict:

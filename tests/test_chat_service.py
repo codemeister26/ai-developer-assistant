@@ -42,7 +42,9 @@ def saved(monkeypatch):
     monkeypatch.setattr(chat_service, "add_message", fake_add_message)
     monkeypatch.setattr(chat_service, "get_history", lambda conversation_id: [])
     # RAG document lookup alag feature hai — yahan wo DB tak na jaye
-    monkeypatch.setattr(chat_service, "build_context", lambda question, user_id: "")
+    monkeypatch.setattr(
+        chat_service, "build_context", lambda question, user_id: ("", [])
+    )
     return recorded
 
 
@@ -236,3 +238,22 @@ def test_done_event_works_without_usage(monkeypatch, saved):
 
     assert events[-1]["type"] == "done"
     assert "usage" not in events[-1]
+
+
+def test_done_event_names_the_documents_used(monkeypatch, saved):
+    """User ko dikhna chahiye ki jawab kahan se aaya"""
+    monkeypatch.setattr(
+        chat_service,
+        "build_context",
+        lambda question, user_id: ("excerpt", ["manual.pdf", "notes.md"]),
+    )
+
+    events = collect(monkeypatch, FakeProvider(chunks=["hi"]))
+
+    assert events[-1]["sources"] == ["manual.pdf", "notes.md"]
+
+
+def test_no_sources_key_when_no_documents_matched(monkeypatch, saved):
+    events = collect(monkeypatch, FakeProvider(chunks=["hi"]))
+
+    assert "sources" not in events[-1]

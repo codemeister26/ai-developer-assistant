@@ -66,7 +66,9 @@ def _stream_reply(
     try:
         provider = get_provider(model, api_key)
 
-        for chunk in provider.stream(model, _system_prompt(mode, question, user_id), history):
+        system, sources = _system_prompt(mode, question, user_id)
+
+        for chunk in provider.stream(model, system, history):
             full_response += chunk
             yield {"type": "token", "text": chunk}
 
@@ -83,6 +85,10 @@ def _stream_reply(
             "conversation_id": conversation_id,
             "chars": len(full_response),
         }
+
+        # UI isse dikhata hai ki jawab kin documents se bana
+        if sources:
+            done["sources"] = sources
 
         # Provider stream khatam hone par usage bharta hai. Na mile toh event
         # usage ke bina jaata hai — UI bas kuch nahi dikhayega.
@@ -113,7 +119,9 @@ def _stream_reply(
             )
 
 
-def _system_prompt(mode: str, question: str | None, user_id: int | None) -> str:
+def _system_prompt(
+    mode: str, question: str | None, user_id: int | None
+) -> tuple[str, list[str]]:
     """Mode ka prompt, aur agar upload kiye documents mein jawab ho toh wo bhi.
 
     Documents na hon ya embedding model band ho toh chat normal chalti rehti
@@ -122,10 +130,11 @@ def _system_prompt(mode: str, question: str | None, user_id: int | None) -> str:
     prompt = get_prompt(mode)
 
     if not question:
-        return prompt
+        return prompt, []
 
     try:
-        return prompt + build_context(question, user_id)
+        context, sources = build_context(question, user_id)
+        return prompt + context, sources
     except EmbeddingError:
         logger.info("Skipping document context — embedding model unavailable")
-        return prompt
+        return prompt, []

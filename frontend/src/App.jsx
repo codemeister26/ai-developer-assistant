@@ -6,6 +6,7 @@ import {
   deleteConversation,
   fetchConversation,
   listConversations,
+  listDocuments,
   generateTitle,
   listModels,
   logout as logoutRequest,
@@ -66,6 +67,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [documentsOpen, setDocumentsOpen] = useState(false)
   const [lastUsage, setLastUsage] = useState(null)
+  // Badge ke liye — warna pata hi nahi chalta ki koi document load hai ya nahi
+  const [documentCount, setDocumentCount] = useState(0)
+  const [lastSources, setLastSources] = useState([])
   const [sessionCost, setSessionCost] = useState(0)
   const [search, setSearch] = useState('')
   // null = abhi pata nahi (status aa raha hai), uske baad {enabled, email}
@@ -84,6 +88,14 @@ export default function App() {
     setError(null)
     setErrorKind(null)
   }
+
+  const refreshDocumentCount = useCallback(async () => {
+    try {
+      setDocumentCount((await listDocuments()).length)
+    } catch {
+      // Count na mile toh badge nahi dikhega, aur kuch nahi bigadta
+    }
+  }, [])
 
   const loadConversations = useCallback(async (term = '') => {
     try {
@@ -150,6 +162,8 @@ export default function App() {
         showError(err)
       }
 
+      await refreshDocumentCount()
+
       try {
         setHealth(await checkHealth())
       } catch {
@@ -158,7 +172,7 @@ export default function App() {
     }
 
     loadInitialData()
-  }, [loadConversations, signedIn])
+  }, [loadConversations, signedIn, refreshDocumentCount])
 
   function handleSignedIn(session) {
     setSessionToken(session.token)
@@ -214,6 +228,7 @@ export default function App() {
 
     setActiveId(null)
     setMessages([])
+    setLastSources([])
     clearError()
   }
 
@@ -262,7 +277,7 @@ export default function App() {
     let receivedAnything = false
 
     try {
-      const { id, usage } = await sendMessage({
+      const { id, usage, sources } = await sendMessage({
         message: text,
         conversationId: activeId,
         mode,
@@ -281,6 +296,7 @@ export default function App() {
       })
 
       recordUsage(usage)
+      setLastSources(sources ?? [])
 
       // Nayi chat thi toh ab uska id mil gaya
       const isNewChat = !activeId && id
@@ -336,7 +352,7 @@ export default function App() {
     abortRef.current = controller
 
     try {
-      const { usage } = await regenerate({
+      const { usage, sources } = await regenerate({
         conversationId: activeId,
         mode,
         model,
@@ -353,6 +369,7 @@ export default function App() {
       })
 
       recordUsage(usage)
+      setLastSources(sources ?? [])
       await refreshMessages(activeId)
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -435,12 +452,19 @@ export default function App() {
             )}
 
             <button
-              className="settings-button"
+              className="settings-button documents-button"
               onClick={() => setDocumentsOpen(true)}
-              title="Documents"
+              title={
+                documentCount
+                  ? `${documentCount} document(s) — searched on every question`
+                  : 'Upload documents'
+              }
               aria-label="Documents"
             >
               📎
+              {documentCount > 0 && (
+                <span className="documents-badge">{documentCount}</span>
+              )}
             </button>
 
             <button
@@ -472,6 +496,12 @@ export default function App() {
           </div>
         )}
 
+        {lastSources.length > 0 && (
+          <div className="sources-line">
+            Answered using: {lastSources.join(', ')}
+          </div>
+        )}
+
         <UsageBar last={lastUsage} sessionCost={sessionCost} />
 
         <MessageInput
@@ -490,7 +520,12 @@ export default function App() {
       </main>
 
       {documentsOpen && (
-        <DocumentsPanel onClose={() => setDocumentsOpen(false)} />
+        <DocumentsPanel
+          onClose={() => {
+            setDocumentsOpen(false)
+            refreshDocumentCount()
+          }}
+        />
       )}
 
       {settingsOpen && (

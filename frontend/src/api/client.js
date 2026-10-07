@@ -182,12 +182,14 @@ export async function sendMessage({
   let id = response.headers.get('X-Conversation-Id') || conversationId
   let streamError = null
   let usage = null
+  let sources = []
 
   await readEvents(response, (event) => {
     if (event.type === 'token') onChunk(event.text)
     else if (event.type === 'done') {
       id = event.conversation_id || id
       usage = event.usage ?? null
+      sources = event.sources ?? []
     } else if (event.type === 'error') streamError = event
   })
 
@@ -197,7 +199,7 @@ export async function sendMessage({
     throw error
   }
 
-  return { id, usage }
+  return { id, usage, sources }
 }
 
 /** Aakhri jawab hatao aur naya banao — user ka sawaal wahi rehta hai */
@@ -216,11 +218,14 @@ export async function regenerate({ conversationId, mode, model, apiKey, signal, 
 
   let streamError = null
   let usage = null
+  let sources = []
 
   await readEvents(response, (event) => {
     if (event.type === 'token') onChunk(event.text)
-    else if (event.type === 'done') usage = event.usage ?? null
-    else if (event.type === 'error') streamError = event
+    else if (event.type === 'done') {
+      usage = event.usage ?? null
+      sources = event.sources ?? []
+    } else if (event.type === 'error') streamError = event
   })
 
   if (streamError) {
@@ -229,7 +234,7 @@ export async function regenerate({ conversationId, mode, model, apiKey, signal, 
     throw error
   }
 
-  return { usage }
+  return { usage, sources }
 }
 
 /** Is message se aage ka sab hatao — edit karke dobara bhejne se pehle */
