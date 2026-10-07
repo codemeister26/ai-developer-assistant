@@ -39,13 +39,13 @@ async function send(chunks, options) {
   vi.stubGlobal('fetch', vi.fn(async () => mockResponse(chunks, options)))
 
   const received = []
-  const id = await sendMessage({
+  const { id, usage } = await sendMessage({
     message: 'hi',
     model: 'llama3.2:3b',
     onChunk: (text) => received.push(text),
   })
 
-  return { received, id }
+  return { received, id, usage }
 }
 
 describe('SSE parsing', () => {
@@ -89,6 +89,24 @@ describe('SSE parsing', () => {
     ])
 
     expect(id).toBe('from-done')
+  })
+
+  it('reports token usage from the done event', async () => {
+    const { usage } = await send([
+      frame({
+        type: 'done',
+        conversation_id: 'c1',
+        usage: { input_tokens: 120, output_tokens: 40, cost_usd: 0.0003 },
+      }),
+    ])
+
+    expect(usage).toEqual({ input_tokens: 120, output_tokens: 40, cost_usd: 0.0003 })
+  })
+
+  it('returns null usage when the backend does not send any', async () => {
+    const { usage } = await send([frame({ type: 'done', conversation_id: 'c1' })])
+
+    expect(usage).toBeNull()
   })
 
   it('ignores a malformed frame instead of killing the stream', async () => {

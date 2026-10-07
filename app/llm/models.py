@@ -12,6 +12,9 @@ class ModelInfo:
     provider: str
     needs_key: bool
     note: str = ""
+    # Price per million tokens (USD). Local models free hain, isliye 0.
+    input_price: float = 0.0
+    output_price: float = 0.0
     # Anthropic ke alag-alag models alag params lete hain — Haiku 4.5 effort par
     # error deta hai, jabki Sonnet/Opus use karte hain. Isliye per-model rakha hai.
     extra_params: dict = field(default_factory=dict)
@@ -31,6 +34,8 @@ MODELS = [
         provider="anthropic",
         needs_key=True,
         note="Sabse sasta Claude — $1/$5 per million tokens",
+        input_price=1.0,
+        output_price=5.0,
         # Haiku 4.5 par "effort" bhejne se error aata hai, isliye kuch nahi bhejte
         extra_params={},
     ),
@@ -40,6 +45,8 @@ MODELS = [
         provider="anthropic",
         needs_key=True,
         note="Balanced — $2/$10 per million tokens",
+        input_price=2.0,
+        output_price=10.0,
         extra_params={
             "thinking": {"type": "adaptive"},
             "output_config": {"effort": "medium"},
@@ -51,6 +58,8 @@ MODELS = [
         provider="anthropic",
         needs_key=True,
         note="Sabse capable — $5/$25 per million tokens",
+        input_price=5.0,
+        output_price=25.0,
         extra_params={
             "thinking": {"type": "adaptive"},
             "output_config": {"effort": "medium"},
@@ -65,3 +74,15 @@ DEFAULT_MODEL = "llama3.2:3b"
 
 def get_model(model_id: str) -> ModelInfo | None:
     return MODELS_BY_ID.get(model_id)
+
+
+def cost_of(model_id: str, input_tokens: int, output_tokens: int) -> float:
+    """Is request ka kharcha (USD). Local models par hamesha 0."""
+    info = get_model(model_id)
+
+    if info is None:
+        return 0.0
+
+    return (
+        input_tokens * info.input_price + output_tokens * info.output_price
+    ) / 1_000_000

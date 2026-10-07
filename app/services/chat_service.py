@@ -1,7 +1,7 @@
 from app.config.prompts import get_prompt
 from app.llm.base import LLMAuthError, LLMUnavailableError
 from app.llm.factory import get_provider
-from app.llm.models import DEFAULT_MODEL
+from app.llm.models import DEFAULT_MODEL, cost_of
 from app.memory.chat_memory import add_message, drop_last_assistant_message, get_history
 from app.rag.documents import build_context
 from app.rag.embeddings import EmbeddingError
@@ -78,11 +78,25 @@ def _stream_reply(
         yield {"type": "error", "kind": "unavailable", "message": AI_UNAVAILABLE_MESSAGE}
 
     else:
-        yield {
+        done = {
             "type": "done",
             "conversation_id": conversation_id,
             "chars": len(full_response),
         }
+
+        # Provider stream khatam hone par usage bharta hai. Na mile toh event
+        # usage ke bina jaata hai — UI bas kuch nahi dikhayega.
+        if provider.usage:
+            done["usage"] = {
+                **provider.usage,
+                "cost_usd": cost_of(
+                    model,
+                    provider.usage["input_tokens"],
+                    provider.usage["output_tokens"],
+                ),
+            }
+
+        yield done
 
     finally:
         # finally isliye — client beech mein disconnect ho jaaye tab bhi jitna

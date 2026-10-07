@@ -45,6 +45,19 @@ class OllamaProvider(LLMProvider):
             )
 
             for chunk in stream:
+                # Aakhri chunk mein token counts aate hain.
+                #
+                # Dhyan do: prompt_eval_count "actually evaluate kiye gaye"
+                # tokens hain, "prompt mein kitne the" nahi. Wahi prompt
+                # dobara bhejne par Ollama KV cache use karta hai aur count
+                # kam aata hai. Local models ka cost 0 hai toh isse farak
+                # nahi padta, par number dekh kar confuse mat hona.
+                if chunk.get("done"):
+                    self.usage = {
+                        "input_tokens": chunk.get("prompt_eval_count") or 0,
+                        "output_tokens": chunk.get("eval_count") or 0,
+                    }
+
                 content = chunk["message"]["content"]
                 if content:
                     if first_chunk:

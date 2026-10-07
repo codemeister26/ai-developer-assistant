@@ -22,6 +22,7 @@ import LoginScreen from './components/LoginScreen'
 import MessageInput from './components/MessageInput'
 import MessageList from './components/MessageList'
 import SettingsPanel from './components/SettingsPanel'
+import UsageBar from './components/UsageBar'
 import SidebarToggle from './components/SidebarToggle'
 
 const KEY_STORAGE = 'llm-api-key'
@@ -64,6 +65,8 @@ export default function App() {
   const [apiKey, setApiKey] = useState(() => readStored(KEY_STORAGE))
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [documentsOpen, setDocumentsOpen] = useState(false)
+  const [lastUsage, setLastUsage] = useState(null)
+  const [sessionCost, setSessionCost] = useState(0)
   const [search, setSearch] = useState('')
   // null = abhi pata nahi (status aa raha hai), uske baad {enabled, email}
   const [auth, setAuth] = useState(null)
@@ -172,6 +175,13 @@ export default function App() {
     setActiveId(null)
   }
 
+  function recordUsage(usage) {
+    if (!usage) return
+
+    setLastUsage(usage)
+    setSessionCost((total) => total + (usage.cost_usd ?? 0))
+  }
+
   function saveApiKey(key) {
     setApiKey(key)
     writeStored(KEY_STORAGE, key)
@@ -252,7 +262,7 @@ export default function App() {
     let receivedAnything = false
 
     try {
-      const id = await sendMessage({
+      const { id, usage } = await sendMessage({
         message: text,
         conversationId: activeId,
         mode,
@@ -269,6 +279,8 @@ export default function App() {
           })
         },
       })
+
+      recordUsage(usage)
 
       // Nayi chat thi toh ab uska id mil gaya
       const isNewChat = !activeId && id
@@ -324,7 +336,7 @@ export default function App() {
     abortRef.current = controller
 
     try {
-      await regenerate({
+      const { usage } = await regenerate({
         conversationId: activeId,
         mode,
         model,
@@ -340,6 +352,7 @@ export default function App() {
         },
       })
 
+      recordUsage(usage)
       await refreshMessages(activeId)
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -458,6 +471,8 @@ export default function App() {
             )}
           </div>
         )}
+
+        <UsageBar last={lastUsage} sessionCost={sessionCost} />
 
         <MessageInput
           text={draft}

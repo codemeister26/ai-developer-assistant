@@ -19,6 +19,12 @@ class LLMAuthError(LLMError):
 
 
 class LLMProvider(ABC):
+    def __init__(self):
+        # Stream khatam hone par bharta hai: {"input_tokens": n, "output_tokens": n}
+        # Har request ke liye naya provider banta hai, isliye instance par
+        # rakhna safe hai — ek user ka usage doosre ko nahi dikhega.
+        self.usage: dict | None = None
+
     @abstractmethod
     def stream(self, model: str, system: str, messages: list) -> Generator[str, None, None]:
         """Jawab token-by-token do.

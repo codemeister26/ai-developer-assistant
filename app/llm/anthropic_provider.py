@@ -18,6 +18,8 @@ class AnthropicProvider(LLMProvider):
     """
 
     def __init__(self, api_key: str):
+        super().__init__()
+
         if not api_key:
             raise LLMAuthError("Claude models ke liye API key chahiye")
 
@@ -47,6 +49,13 @@ class AnthropicProvider(LLMProvider):
                             logger.info("First token time: %.2fs", time.time() - start)
                             first_chunk = False
                         yield text
+
+                # Stream poora hone ke baad hi asli usage milta hai
+                final = stream.get_final_message()
+                self.usage = {
+                    "input_tokens": final.usage.input_tokens,
+                    "output_tokens": final.usage.output_tokens,
+                }
 
             logger.info("Total time: %.2fs", time.time() - start)
 

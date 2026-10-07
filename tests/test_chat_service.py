@@ -14,10 +14,12 @@ from app.services.chat_service import (
 class FakeProvider:
     """Provider ki jagah — kya bheja gaya wo record karta hai"""
 
-    def __init__(self, chunks=(), error=None):
+    def __init__(self, chunks=(), error=None, usage=None):
         self.chunks = chunks
         self.error = error
         self.calls = []
+        # Asli providers stream khatam hone par ye bharte hain
+        self.usage = usage
 
     def stream(self, model, system, messages):
         self.calls.append({"model": model, "system": system, "messages": messages})
@@ -192,3 +194,45 @@ def test_api_key_is_passed_to_the_factory_not_the_stream(monkeypatch, saved):
     list(get_ai_response_stream("hello", str(uuid.uuid4()), model="claude-opus-5", api_key="sk-test"))
 
     assert seen == {"model": "claude-opus-5", "api_key": "sk-test"}
+
+
+# ─── Token usage aur cost ─────────────────────────────────────────────────────
+
+def test_done_event_carries_token_usage(monkeypatch, saved):
+    provider = FakeProvider(
+        chunks=["hi"], usage={"input_tokens": 100, "output_tokens": 50}
+    )
+
+    events = collect(monkeypatch, provider)
+
+    assert events[-1]["usage"]["input_tokens"] == 100
+    assert events[-1]["usage"]["output_tokens"] == 50
+
+
+def test_local_model_costs_nothing(monkeypatch, saved):
+    provider = FakeProvider(
+        chunks=["hi"], usage={"input_tokens": 1000, "output_tokens": 1000}
+    )
+
+    events = collect(monkeypatch, provider, model="llama3.2:3b")
+
+    assert events[-1]["usage"]["cost_usd"] == 0
+
+
+def test_paid_model_reports_cost(monkeypatch, saved):
+    """Haiku: $1 input / $5 output per million"""
+    provider = FakeProvider(
+        chunks=["hi"], usage={"input_tokens": 1_000_000, "output_tokens": 1_000_000}
+    )
+
+    events = collect(monkeypatch, provider, model="claude-haiku-4-5")
+
+    assert events[-1]["usage"]["cost_usd"] == pytest.approx(6.0)
+
+
+def test_done_event_works_without_usage(monkeypatch, saved):
+    """Provider usage na de toh event phir bhi jaana chahiye"""
+    events = collect(monkeypatch, FakeProvider(chunks=["hi"], usage=None))
+
+    assert events[-1]["type"] == "done"
+    assert "usage" not in events[-1]
